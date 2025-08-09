@@ -756,6 +756,10 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
   top: var(--hudH) !important;
 }
 
+
+/* Force-hide modal hint text by default */
+.modal-backdrop .small { display: none !important; }
+
 </style>
 
 <style>
@@ -853,7 +857,7 @@ button:active {
     </div>
 
     <!-- Start Menu -->
-    <div id="startMenu" class="menu-backdrop">
+    <div id="startMenu" class="menu-backdrop" style="display:flex">>
       <div class="menu">
         <h1>Bieg po Punkty</h1>
         <div class="subtitle">Wpisz swój nick i kliknij <b>Start</b>, aby rozpocząć bieg.</div>
@@ -867,7 +871,7 @@ button:active {
     </div>
 
     <!-- Checkpoint modal -->
-    <div id="adModal" class="modal-backdrop">
+    <div id="adModal" class="modal-backdrop" style="display:none">>
       <div class="modal">
         <h2 id="adTitle">Checkpoint</h2>
         <p id="adText">Obejrzyj reklamę, aby odebrać <b>1 pkt</b> na GrynaPlus i biec dalej.</p>
@@ -979,50 +983,6 @@ function resize(){
 
     const toast = document.getElementById('toast');
     const banner = document.getElementById('banner');
-    <script>
-/* === GOOGLE SHEETS: auto-log po ukończeniu rundy (checkpoint) ===
-   Uzupełnij tylko SHEETS_URL swoim adresem Apps Script (masz go już od nas). */
-const SHEETS_URL = "https://script.google.com/macros/s/AKfycbyXVrx1iN2ebe9eZYXsFDzUa-6aWVctxFa6MzxxQvZXrEYIqaz9k87D3Oals_8a-kq3/exec";
-
-/** Zbiera snapshot rundy i wysyła do Sheets.
- *  Wołamy przy dojściu do checkpointu (gdy licznik spadnie do 0).
- */
-async function _gpSendLevelSnapshot(reason = "checkpoint") {
-  try {
-    const payload = {
-      reason,                         // "checkpoint" / "manual" itp.
-      ts: new Date().toISOString(),   // znacznik czasu
-      nick: (window.state?.nick || "").trim(),
-      points: Number(window.state?.points || 0),
-      level: Number(window.state?.diff?.level || 0),
-      obstaclesThisRound: Number(window.state?.obstaclesThisRound || 0),
-      // możesz dodać inne pola, np. licznik reklam itp. jeśli trzymasz je w state
-      userAgent: navigator.userAgent
-    };
-
-    // Najprościej: no-cors (nie czytamy odpowiedzi, ale nie ma problemu z CORS)
-    await fetch(SHEETS_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    // Jeśli chcesz mieć potwierdzenie w konsoli:
-    console.debug("[Sheets] Wysłano snapshot rundy:", payload);
-  } catch (err) {
-    console.warn("[Sheets] Błąd wysyłki:", err);
-  }
-}
-
-/* (opcjonalnie) Zabezpieczenie: spróbuj wysłać ostatni stan przy wyjściu ze strony */
-window.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && window.state?.started) {
-    _gpSendLevelSnapshot("autoflush");
-  }
-});
-</script>
-
 
     // ========= Utils =========
     function mmss(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const m=Math.floor(s/60); const r=s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`; }
@@ -1205,7 +1165,6 @@ window.addEventListener("visibilitychange", () => {
       }
     }
     function onCheckpointReady(){
-          _gpSendLevelSnapshot("checkpoint");
       statusMsg.textContent = 'Reklama dostępna';
       state.paused = true;
       const titleEl = document.getElementById('adTitle');
@@ -1719,6 +1678,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 })();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var adModal = document.getElementById('adModal');
+  if (adModal) adModal.style.display = 'none';
+});
 </script>
 
 </body>
