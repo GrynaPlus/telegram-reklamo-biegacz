@@ -739,6 +739,23 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
   :root { --hudH: 76px; }
 }
 
+
+/* --- Banner compact & closer to top HUD --- */
+#banner {
+  top: calc(var(--hudH) + 2px) !important;
+  font-size: clamp(11px, 2.6vw, 13px) !important;
+  padding: 6px 10px !important;
+}
+@media (max-width: 420px) {
+  #banner { top: calc(var(--hudH) + 1px) !important; font-size: 12px !important; }
+}
+
+
+/* --- Banner even closer to HUD --- */
+#banner {
+  top: var(--hudH) !important;
+}
+
 </style>
 
 <style>
@@ -810,14 +827,14 @@ button:active {
     <div class="hud" id="hud">
 <div id="hudVis" class="hud-two">
   <div class="badge brand">Bieg po Punkty</div>
-  <div class="badge">Nick: <span id="nickMir" class="nick">—</span> • Punkty na GrynaPlus: <span id="pointsMir">0</span></div>
+  <div class="badge">Nick: <span id="nickMir" class="nick">—</span> • Punkty: <span id="pointsMir">0</span></div>
 </div>
       <div class="left">
         <div class="badge brand">ReklamoBiegacz</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
         <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
-        <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
-        <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
+        <div class="badge">Przeszkody: <span id="obstaclesCount">0</span></div>
+        <div class="badge">Trudność: <span id="diffLabel">0</span></div>
       </div>
       <div class="center">
         <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
@@ -828,8 +845,8 @@ button:active {
 
     <div class="bar" id="bbar">
 <div id="bbarVis" class="bbar-three">
-  <div class="badge">Przeszkody (runda): <span id="obstMir">0</span></div>
-  <div class="badge">Poziom trudności: <span id="diffMir">0</span></div>
+  <div class="badge">Przeszkody: <span id="obstMir">0</span></div>
+  <div class="badge">Trudność: <span id="diffMir">0</span></div>
   <div class="badge">Reklama za: <span id="countMir">02:00</span></div>
 </div>
       <div class="muted" id="statusMsg"></div>
@@ -1090,7 +1107,7 @@ function resize(){
 
     function onHit(){
       state.roundHadHit = true;
-      setBanner('Bonus utracony – powodzenia w następnej rundzie!','fail');
+      setBanner('bonus utracony – powodzenia w następnej rundzie!','fail');
       showToast('Uwaga! Unikaj przeszkód');
       canvas.classList.add('shake'); setTimeout(()=> canvas.classList.remove('shake'), 200);
       state.player.inv = 550;
@@ -1614,6 +1631,23 @@ document.addEventListener('DOMContentLoaded', ()=>{
     mirror('diffLabel','diffMir');
     mirror('countdown','countMir');
   });
+})();
+</script>
+
+
+<script>
+(function(){
+  var banner = document.getElementById('banner');
+  if(!banner) return;
+  var obs = new MutationObserver(function(){
+    if(banner.style.display !== 'none' && banner.textContent.trim().toLowerCase().includes('bonus utracony')){
+      clearTimeout(banner._hideTimer);
+      banner._hideTimer = setTimeout(function(){
+        banner.style.display = 'none';
+      }, 5000);
+    }
+  });
+  obs.observe(banner, {attributes:true, childList:true, subtree:true, attributeFilter:['style']});
 })();
 </script>
 
