@@ -756,6 +756,25 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
 #startMenu #menuSave { order: 1; }
 #startMenu #menuStart { order: 2; }
 
+
+/* === Force bottom bar to 1 row with 3 equal chips === */
+#bbar .right { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#bbar .right .badge { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; padding: 6px 8px; font-size: clamp(10px, 2.8vw, 14px); }
+/* Top bar: also 3 equal chips, safely truncated */
+#hud .left { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#hud .left .badge { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; padding: 6px 8px; font-size: clamp(10px, 2.8vw, 14px); }
+#hud .left .brand { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+/* On very narrow screens shrink a bit more */
+@media (max-width: 380px) {
+  #bbar .right .badge, #hud .left .badge { font-size: 11px; padding: 5px 6px; }
+}
+
+
+/* Ensure start menu buttons are stacked vertically: Save above Start */
+#startMenu .row { display: flex; flex-direction: column; gap: 10px; }
+#startMenu #menuSave { order: 1; }
+#startMenu #menuStart { order: 2; }
+
 </style>
 
 <style>
