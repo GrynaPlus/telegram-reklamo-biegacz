@@ -832,7 +832,7 @@ button:active {
       <div class="left">
         <div class="badge brand">Bieg po Punkty</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
-        <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
+        <div class="badge">Punkty: <span id="pointsCount">0</span></div>
         <div class="badge">Przeszkody: <span id="obstaclesCount">0</span></div>
         <div class="badge">Trudność: <span id="diffLabel">0</span></div>
       </div>
@@ -921,7 +921,7 @@ function resize(){
       started: false,
       running: true,
       lastTime: 0,
-      speed: 170,
+      speed: 130,
       player: { x: 76, y: 200, w: 28, h: 44, inv: 0, dashCd: 0 },
       obstacles: [],
       hazards: [],
@@ -1171,7 +1171,8 @@ function resize(){
       adModal.style.display = 'flex'; adError.style.display='none';
     }
     function resetCountdown(){
-      state.countdown = 120000; state._warned = false; countdownLabel.textContent = mmss(state.countdown);
+      state.countdown = 120000; state._warned = false;state._shownLossBannerThisRound = false;
+ countdownLabel.textContent = mmss(state.countdown);
       statusMsg.textContent = ''; state.roundHadHit = false; state.obstaclesThisRound = 0; obstaclesCount.textContent = '0';
       setBanner('Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!','success'); state.paused = false; laterBtn.style.display = '';
     
@@ -1250,7 +1251,7 @@ function resize(){
       const lvl = Math.floor(state.diff.t/1000);
       if(lvl !== state.diff.level){
         state.diff.level = lvl; diffLabel.textContent = String(lvl);
-        state.speed = 170 + Math.min(220, lvl*1.7);
+        state.speed = 130 + Math.min(160, lvl*1.0);
         if(lvl % 6 === 0){ state.world.fog = 1.0; }
         if(lvl > 25){ state.world.wind = Math.sin(state.world.t*0.8) * Math.min(70, (lvl-25)*1.8); }
       }
@@ -1648,6 +1649,30 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }
   });
   obs.observe(banner, {attributes:true, childList:true, subtree:true, attributeFilter:['style']});
+})();
+</script>
+
+
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(function(){
+    if (typeof window.setBanner === 'function' && !window.__patchedSetBanner) {
+      window.__patchedSetBanner = true;
+      const original = window.setBanner;
+      window.setBanner = function(text, type){
+        original(text, type);
+        try {
+          if (/Omijaj\s+przeszkody/i.test(text) || /bonus\s+utracony/i.test(text)) {
+            clearTimeout(window.__bnrHideTO);
+            window.__bnrHideTO = setTimeout(function(){
+              try { document.getElementById('banner').style.display = 'none'; } catch(e){}
+            }, 5000);
+          }
+        } catch(e){}
+      };
+    }
+  });
 })();
 </script>
 
