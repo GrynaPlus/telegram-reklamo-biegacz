@@ -693,10 +693,11 @@ html, body {
   overflow-x: hidden;
   background: #000;
 }
-canvas {
-  display: block;
+canvas { display: block;
+  width: 100vw;
+  height: 100dvh;
   max-width: 100%;
-  height: auto;
+  touch-action: none;
 }
 #menu, #adModal, .modal, .panel {
   box-sizing: border-box;
@@ -823,10 +824,11 @@ button:active {
       }
     }
     // === End helpers ===
-function resize() {
+function resize(){
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(canvas.clientWidth * dpr);
-      canvas.height = Math.floor(canvas.clientHeight * dpr);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     const ro = new ResizeObserver(resize); ro.observe(canvas);
@@ -863,6 +865,7 @@ function resize() {
       roundHadHit: false,
       diff: { t:0, level:0 },
       debug: { hitboxes: false, nearMiss:false },
+      levelAwarded: false,
     };
 
     // ========= UI refs =========
@@ -1090,6 +1093,8 @@ function resize() {
       setBanner('Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!','success'); state.paused = false; laterBtn.style.display = '';
     
       state.heart=null; state.heartShownThisRound=false; state.roundHadHit=false;
+
+      state.levelAwarded = false;
 }
 
     // ====== Bind buttons to Monetag ======
@@ -1458,42 +1463,33 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
       // Override level-complete handler
       window.onCheckpointReady = function(){
-        try {
-          var statusMsg = document.getElementById('statusMsg');
-          if (statusMsg) statusMsg.textContent = '';
-        } catch(e){}
+                                try { var statusMsg = document.getElementById('statusMsg'); if (statusMsg) statusMsg.textContent = ''; } catch(e){}
         if (window.state) window.state.paused = true;
-
-        var gained = (window.state && window.state.roundHadHit) ? 1 : 2;
-        try{
-          if (typeof window.setPoints === 'function') {
-            window.setPoints((window.state?.points || 0) + gained);
-          } else if (window.state) {
-            window.state.points = (window.state.points || 0) + gained;
-            var pc = document.getElementById('pointsCount');
-            if (pc) pc.textContent = String(window.state.points);
-          }
-        }catch(e){ console.error('points set err', e); }
-
-        // Update modal text
+        var base = 1;
+        var bonus = (window.state && !window.state.roundHadHit) ? 1 : 0;
+        var gained = base + bonus;
+        if (!(window.state && window.state.levelAwarded)) {
+          var current = 0;
+          try { current = parseInt(localStorage.getItem('gp_points')||'0',10); if(isNaN(current)) current = 0; } catch(e) { current = (window.state && typeof window.state.points==='number') ? window.state.points : 0; }
+          try {
+            if (typeof window.setPoints === 'function') { window.setPoints(current + gained); }
+            else if (window.state) { window.state.points = (current || 0) + gained; var pc = document.getElementById('pointsCount'); if (pc) pc.textContent = String(window.state.points); }
+          } catch(e){ console.error('points set err', e); }
+          if (window.state) window.state.levelAwarded = true;
+          try { console.log('[RB] Awarded base', base, '+ bonus', bonus, '=>', gained, 'points. New total =', (current+gained)); } catch(_){}
+        } else { try { console.log('[RB] Award skipped (already awarded)'); } catch(_){} }
         try{
           var titleEl = document.getElementById('adTitle');
           var textEl  = document.getElementById('adText');
           if (titleEl) titleEl.textContent = 'Poziom ukończony';
-          if (textEl)  textEl.innerHTML   = 'Zdobyłeś <b>'+gained+' pkt</b>';
-        }catch(e){}
-
-        // Play ad automatically, but don't block longer than 8s
-        var adP;
-        try{
-          if (typeof window.show_9687992 === 'function') {
-            adP = window.show_9687992();
-          } else {
-            adP = Promise.reject('no monetag function');
+          if (textEl)  {
+            if (bonus===1) textEl.innerHTML = 'Zdobyłeś <b>1 pkt</b> + <b>1 pkt bonus</b> = <b>2 pkt</b>';
+            else textEl.innerHTML = 'Zdobyłeś <b>1 pkt</b>';
           }
-        } catch(e){ adP = Promise.reject(e); }
+        }catch(e){}
+        var adP;
+        try{ if (typeof window.show_9687992 === 'function') { adP = window.show_9687992(); } else { adP = Promise.reject('no monetag function'); } } catch(e){ adP = Promise.reject(e); }
         var timeout = new Promise(function(resolve){ setTimeout(resolve, 8000); });
-
         Promise.race([adP, timeout]).finally(function(){
           try{
             var adModal = document.getElementById('adModal');
