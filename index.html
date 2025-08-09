@@ -775,6 +775,40 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
 #startMenu #menuSave { order: 1; }
 #startMenu #menuStart { order: 2; }
 
+
+/* === Robust HUD/BBAR grid to prevent overlap === */
+:root { --hudH: 60px; --bbarH: 56px; }
+@media (max-width: 420px) { :root { --hudH: 64px; --bbarH: 60px; } }
+#hud, #bbar { position: fixed; left: 0; right: 0; z-index: 30; pointer-events: none; }
+#hud { top: 0; background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+#bbar { bottom: 0; background: linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+.hud-row, .bbar-row { 
+  display: grid; 
+  grid-template-columns: repeat(3, minmax(0, 1fr)); 
+  gap: 8px; 
+  padding: 8px 10px; 
+}
+#hud .badge, #bbar .badge {
+  pointer-events: auto;
+  text-align: center; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  font-size: clamp(11px, 2.8vw, 14px);
+  padding: 6px 8px;
+  border-radius: 12px;
+}
+#hud .brand { font-weight: 700; }
+#nickLabel { max-width: 40vw; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+/* Reserve space so canvas never sits under bars */
+#gameCanvas {
+  position: absolute;
+  top: var(--hudH);
+  bottom: var(--bbarH);
+  left: 0; right: 0;
+}
+
 </style>
 
 <style>
@@ -843,9 +877,13 @@ button:active {
 
     <div id="banner" class="banner success">Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!</div>
 
-    <div class="hud" id="hud">
-      <div class="left">
-        <div class="badge brand">Bieg po Punkty</div>
+    <div id="hud" class="hud">
+  <div class="hud-row">
+    <div class="badge brand">Bieg po Punkty</div>
+    <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
+    <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
+  </div>
+</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
         <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
       </div>
@@ -856,9 +894,13 @@ button:active {
         <button id="watchNow" class="cta" style="display:none">Obejrzyj reklamę</button></div>
     </div>
 
-    <div class="hud" id="bbar">
-  <div class="right">
+    <div id="bbar" class="hud">
+  <div class="bbar-row">
     <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
+    <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
+    <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
+  </div>
+</div>
     <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
     <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
   </div>
