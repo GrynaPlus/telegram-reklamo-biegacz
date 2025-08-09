@@ -683,130 +683,60 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
     .shake { animation: shake .2s linear 1; }
     @keyframes shake { 0%{ transform: translateX(0)} 25%{ transform: translateX(-3px)} 50%{ transform: translateX(3px)} 75%{ transform: translateX(-2px)} 100%{ transform: translateX(0)} }
   
-/* === Custom layout adjustments for mobile split HUD === */
-#hud, #bbar { /* display controlled by JS (hidden on menu) */ align-items: center; justify-content: center; gap: .6rem; padding: .4rem .6rem; }
-#hud .title { font-weight: 700; }
-.bbar-row, .hud-left { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
-@media (max-width: 768px) {
-  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
-  #bbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
-  #gameCanvas { position: absolute; top: 44px; bottom: 44px; left: 0; right: 0; }
-  /* Start menu: column with title at top, then Save, then Start */
-  #startMenu { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
-  #startMenu .gameTitle { margin: .4rem 0; font-size: 1.3rem; font-weight: 800; }
-  #menuSave { order: 1; }
-  #menuStart { order: 2; }
-}
-/* Desktop tweaks keep bars where the file already placed them; we only ensure button order in DOM remains save then start */
-#startMenu .gameTitle { margin-bottom: .5rem; font-size: 1.4rem; font-weight: 800; }
+/* === SAFE LAYOUT: preserve original DOM & IDs; show mirrored, mobile-safe HUD/BBAR === */
+:root { --hudH: 72px; --bbarH: 56px; }
+@media (max-width:420px){ :root { --hudH: 58px; --bbarH: 58px; } }
 
-
-/* === Mobile layout: ensure 3 items top + 3 bottom are visible === */
-@media (max-width: 480px) {
-  /* Bars pinned and compact */
-  #hud, #bbar {
-    position: fixed;
-    left: 0; right: 0;
-    z-index: 30;
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 8px;
-    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
-    pointer-events: none; /* keep clicks going to canvas */
-  }
-  #hud { top: 0; min-height: 48px; }
-  #bbar { bottom: 0; min-height: 42px; background: linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
-
-  /* Compact chips */
-  #hud .hud-item, #bbar .hud-item {
-    pointer-events: auto;
-    flex: 1 1 calc(33.33% - 8px);
-    min-width: 0;
-    text-align: center;
-    padding: 6px 6px;
-    margin: 0;
-    border-radius: 10px;
-    font-size: 12px;
-    line-height: 1.15;
-  }
-  #hud .hud-item b, #bbar .hud-item b { font-size: 12px; }
-
-  /* Avoid breaking the nick badly—allow it to shrink */
-  #nickLabel { display: inline-block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
-
-  /* Ensure game area not covered by bars */
-  #app, body, html { height: 100%; }
-  #gameCanvas {
-    position: absolute;
-    top: 56px;   /* space for top bar */
-    bottom: 50px;/* space for bottom bar */
-    left: 0; right: 0;
-  }
-
-  /* Start menu vertical order and spacing */
-  #startMenu .buttons { display: flex; flex-direction: column; gap: 8px; }
-  #menuSave { order: 1; }
-  #menuStart { order: 2; }
-}
-
-
-/* enforce vertical buttons in start menu (save on top, then start) */
-#startMenu .menu .row:first-of-type { display: flex; flex-direction: column; gap: 10px; }
-#startMenu #menuSave { order: 1; }
-#startMenu #menuStart { order: 2; }
-
-
-/* === Force bottom bar to 1 row with 3 equal chips === */
-#bbar .right { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-#bbar .right .badge { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; padding: 6px 8px; font-size: clamp(10px, 2.8vw, 14px); }
-/* Top bar: also 3 equal chips, safely truncated */
-#hud .left { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-#hud .left .badge { flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap; padding: 6px 8px; font-size: clamp(10px, 2.8vw, 14px); }
-#hud .left .brand { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
-/* On very narrow screens shrink a bit more */
-@media (max-width: 380px) {
-  #bbar .right .badge, #hud .left .badge { font-size: 11px; padding: 5px 6px; }
-}
-
-
-/* Ensure start menu buttons are stacked vertically: Save above Start */
-#startMenu .row { display: flex; flex-direction: column; gap: 10px; }
-#startMenu #menuSave { order: 1; }
-#startMenu #menuStart { order: 2; }
-
-
-/* === Robust HUD/BBAR grid to prevent overlap === */
-:root { --hudH: 60px; --bbarH: 56px; }
-@media (max-width: 420px) { :root { --hudH: 64px; --bbarH: 60px; } }
+/* Position bars when game shows them (JS toggles display on #hud/#bbar) */
 #hud, #bbar { position: fixed; left: 0; right: 0; z-index: 30; pointer-events: none; }
 #hud { top: 0; background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
 #bbar { bottom: 0; background: linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
-.hud-row, .bbar-row { 
-  display: grid; 
-  grid-template-columns: repeat(3, minmax(0, 1fr)); 
-  gap: 8px; 
-  padding: 8px 10px; 
-}
+
+/* Visually hide original children inside #hud / #bbar except our mirrored wrappers */
+#hud > *:not(#hudVis) { position: absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; }
+#bbar > *:not(#bbarVis) { position: absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; }
+
+/* Our mirrored wrappers: layout */
+.hud-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px 10px; }
+.bbar-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px 10px; }
+
 #hud .badge, #bbar .badge {
   pointer-events: auto;
-  text-align: center; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-  font-size: clamp(11px, 2.8vw, 14px);
-  padding: 6px 8px;
-  border-radius: 12px;
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: clamp(11px, 2.6vw, 14px);
+  padding: 6px 8px; border-radius: 12px;
 }
 #hud .brand { font-weight: 700; }
-#nickLabel { max-width: 40vw; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+#hud .nick { max-width: 40vw; display: inline-block; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
 
-/* Reserve space so canvas never sits under bars */
-#gameCanvas {
-  position: absolute;
-  top: var(--hudH);
-  bottom: var(--bbarH);
-  left: 0; right: 0;
+/* Reserve space for bars so canvas is not covered */
+#gameCanvas { position: absolute; top: var(--hudH); bottom: var(--bbarH); left: 0; right: 0; }
+
+/* Menu: stack buttons vertically (Save above Start) */
+#startMenu .row { display: flex; flex-direction: column; gap: 10px; }
+#menuSave { order: 1; }
+#menuStart { order: 2; }
+
+
+/* Keep in-game banners/messages below the top HUD */
+#banner {
+  position: fixed !important;
+  top: calc(var(--hudH) + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 40 !important;
+}
+#statusMsg {
+  position: fixed !important;
+  top: calc(var(--hudH) + 4px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 39 !important;
+  pointer-events: none;
+}
+@media (max-width: 420px) {
+  :root { --hudH: 76px; }
 }
 
 </style>
@@ -877,15 +807,17 @@ button:active {
 
     <div id="banner" class="banner success">Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!</div>
 
-    <div id="hud" class="hud">
-  <div class="hud-row">
-    <div class="badge brand">Bieg po Punkty</div>
-    <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
-    <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
-  </div>
+    <div class="hud" id="hud">
+<div id="hudVis" class="hud-two">
+  <div class="badge brand">Bieg po Punkty</div>
+  <div class="badge">Nick: <span id="nickMir" class="nick">—</span> • Punkty na GrynaPlus: <span id="pointsMir">0</span></div>
 </div>
+      <div class="left">
+        <div class="badge brand">ReklamoBiegacz</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
         <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
+        <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
+        <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
       </div>
       <div class="center">
         <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
@@ -894,24 +826,19 @@ button:active {
         <button id="watchNow" class="cta" style="display:none">Obejrzyj reklamę</button></div>
     </div>
 
-    <div id="bbar" class="hud">
-  <div class="bbar-row">
-    <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
-    <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
-    <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
-  </div>
+    <div class="bar" id="bbar">
+<div id="bbarVis" class="bbar-three">
+  <div class="badge">Przeszkody (runda): <span id="obstMir">0</span></div>
+  <div class="badge">Poziom trudności: <span id="diffMir">0</span></div>
+  <div class="badge">Reklama za: <span id="countMir">02:00</span></div>
 </div>
-    <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
-    <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
-  </div>
-</div>
-</div>
+      <div class="muted" id="statusMsg"></div>
     </div>
 
     <!-- Start Menu -->
     <div id="startMenu" class="menu-backdrop">
-<div class="menu">
-        <h1>Bieg po Punkty</h1>
+      <div class="menu">
+        <h1>ReklamoBiegacz</h1>
         <div class="subtitle">Wpisz swój nick i kliknij <b>Start</b>, aby rozpocząć bieg.</div>
         <div class="row">
           <input id="menuNick" placeholder="Wpisz nick (min. 1 znak)" maxlength="24" placeholder="np. GrynaPlusFan" />
@@ -1163,7 +1090,7 @@ function resize(){
 
     function onHit(){
       state.roundHadHit = true;
-      setBanner('Bonus stracony – powodzenia w następnej rundzie!','fail');
+      setBanner('Bonus utracony – powodzenia w następnej rundzie!','fail');
       showToast('Uwaga! Unikaj przeszkód');
       canvas.classList.add('shake'); setTimeout(()=> canvas.classList.remove('shake'), 200);
       state.player.inv = 550;
@@ -1664,6 +1591,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('orientationchange', resizeCanvas);
   document.addEventListener('DOMContentLoaded', resizeCanvas);
+})();
+</script>
+
+
+<script>
+(function(){
+  function mirror(srcId, dstId){
+    const src = document.getElementById(srcId);
+    const dst = document.getElementById(dstId);
+    if(!src || !dst) return;
+    const sync = ()=>{ dst.textContent = src.textContent; };
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(src, {characterData:true, childList:true, subtree:true});
+  }
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(function(){
+    mirror('nickLabel','nickMir');
+    mirror('pointsCount','pointsMir');
+    mirror('obstaclesCount','obstMir');
+    mirror('diffLabel','diffMir');
+    mirror('countdown','countMir');
+  });
 })();
 </script>
 
