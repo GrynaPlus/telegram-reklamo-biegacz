@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-  <title>ReklamoBiegacz</title>
+  <title>Bieg po Punkty</title>
 
   <!-- MONETAG: wklej swój TAG JS z panelu w to miejsce, aby udostępnić show_9687992(). -->
   <!-- \1\
@@ -682,7 +682,25 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
 
     .shake { animation: shake .2s linear 1; }
     @keyframes shake { 0%{ transform: translateX(0)} 25%{ transform: translateX(-3px)} 50%{ transform: translateX(3px)} 75%{ transform: translateX(-2px)} 100%{ transform: translateX(0)} }
-  </style>
+  
+/* === Custom layout adjustments for mobile split HUD === */
+#hud, #bbar { /* display controlled by JS (hidden on menu) */ align-items: center; justify-content: center; gap: .6rem; padding: .4rem .6rem; }
+#hud .title { font-weight: 700; }
+.bbar-row, .hud-left { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+@media (max-width: 768px) {
+  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
+  #bbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
+  #gameCanvas { position: absolute; top: 44px; bottom: 44px; left: 0; right: 0; }
+  /* Start menu: column with title at top, then Save, then Start */
+  #startMenu { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+  #startMenu .gameTitle { margin: .4rem 0; font-size: 1.3rem; font-weight: 800; }
+  #menuSave { order: 1; }
+  #menuStart { order: 2; }
+}
+/* Desktop tweaks keep bars where the file already placed them; we only ensure button order in DOM remains save then start */
+#startMenu .gameTitle { margin-bottom: .5rem; font-size: 1.4rem; font-weight: 800; }
+
+</style>
 
 <style>
 html, body {
@@ -751,8 +769,9 @@ button:active {
     <div id="banner" class="banner success">Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!</div>
 
     <div class="hud" id="hud">
+  <div class="hud-left"><span id="gameTitleHUD" class="title">Bieg po Punkty</span> • <span>Nick: <b id="nickLabel">—</b></span> • <span>Punkty na GrynaPlus: <b id="pointsCount">0</b></span></div>
       <div class="left">
-        <div class="badge brand">ReklamoBiegacz</div>
+        <div class="badge brand">Bieg po Punkty</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
         <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
         <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
@@ -766,13 +785,14 @@ button:active {
     </div>
 
     <div class="bar" id="bbar">
-      <div class="muted" id="statusMsg"></div>
+  <div class="bbar-row"><span>Przeszkody (runda): <b id="obstaclesCount">0</b></span> • <span>Poziom trudności: <b id="diffLabel">0</b></span> • <span>Reklama za: <b id="countdown">02:00</b></span></div>
+</div>
     </div>
 
     <!-- Start Menu -->
     <div id="startMenu" class="menu-backdrop">
-      <div class="menu">
-        <h1>ReklamoBiegacz</h1>
+<div class="menu">
+        <h1>Bieg po Punkty</h1>
         <div class="subtitle">Wpisz swój nick i kliknij <b>Start</b>, aby rozpocząć bieg.</div>
         <div class="row">
           <input id="menuNick" placeholder="Wpisz nick (min. 1 znak)" maxlength="24" placeholder="np. GrynaPlusFan" />
