@@ -6,7 +6,637 @@
   <title>ReklamoBiegacz</title>
 
   <!-- MONETAG: wklej swój TAG JS z panelu w to miejsce, aby udostępnić show_9687992(). -->
-  <!-- <script>/* MONETAG TAG */</script> -->
+  <!-- \1\
+\ \ \ \ const\ canvas\ =\ document\.getElementById\('gameCanvas'\);\
+\ \ \ \ const\ ctx\ =\ canvas\.getContext\('2d'\);\
+\ \ \ \ \
+\ \ \ \ //\ ===\ Persistence\ helpers\ \(DO\ NOT\ REMOVE\)\ ===\
+\ \ \ \ function\ setNick\(nick\)\{\
+\ \ \ \ \ \ if\(typeof\ nick\ !==\ 'string'\)\ return;\
+\ \ \ \ \ \ state\.nick\ =\ nick\.trim\(\);\
+\ \ \ \ \ \ try\{\ localStorage\.setItem\('gp_nick',\ state\.nick\);\ \}catch\(e\)\{\}\
+\ \ \ \ \ \ try\{\ nickLabel\.textContent\ =\ state\.nick\ \|\|\ '—';\ \}catch\(e\)\{\}\
+\ \ \ \ \}\
+\ \ \ \ function\ setPoints\(p\)\{\
+\ \ \ \ \ \ const\ val\ =\ Math\.max\(0,\ parseInt\(p\|\|0,10\)\);\
+\ \ \ \ \ \ state\.points\ =\ val;\
+\ \ \ \ \ \ try\{\ pointsCount\.textContent\ =\ String\(state\.points\);\ \}catch\(e\)\{\}\
+\ \ \ \ \ \ if\(state\.points\ >=\ 1\)\{\
+\ \ \ \ \ \ \ \ try\{\ localStorage\.setItem\('gp_points',\ String\(state\.points\)\);\ \}catch\(e\)\{\}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\ \ \ \ //\ ===\ End\ helpers\ ===\
+function\ resize\(\)\ \{\
+\ \ \ \ \ \ const\ dpr\ =\ window\.devicePixelRatio\ \|\|\ 1;\
+\ \ \ \ \ \ canvas\.width\ =\ Math\.floor\(canvas\.clientWidth\ \*\ dpr\);\
+\ \ \ \ \ \ canvas\.height\ =\ Math\.floor\(canvas\.clientHeight\ \*\ dpr\);\
+\ \ \ \ \ \ ctx\.setTransform\(dpr,\ 0,\ 0,\ dpr,\ 0,\ 0\);\
+\ \ \ \ \}\
+\ \ \ \ const\ ro\ =\ new\ ResizeObserver\(resize\);\ ro\.observe\(canvas\);\
+\
+\ \ \ \ //\ =========\ State\ =========\
+\ \ \ \ const\ state\ =\ \{\
+\ \ \ \ \ \ started:\ false,\
+\ \ \ \ \ \ running:\ true,\
+\ \ \ \ \ \ lastTime:\ 0,\
+\ \ \ \ \ \ speed:\ 170,\
+\ \ \ \ \ \ player:\ \{\ x:\ 76,\ y:\ 200,\ w:\ 28,\ h:\ 44,\ inv:\ 0,\ dashCd:\ 0\ \},\
+\ \ \ \ \ \ obstacles:\ \[\],\
+\ \ \ \ \ \ hazards:\ \[\],\
+\ \ \ \ \ \ nextObstacleIn:\ 0,\
+\ \ \ \ \ \ nextHazardIn:\ 2800,\
+\ \ \ \ \ \ countdown:\ 120000,\
+\ \ \ \ \ \ points:\ 0,\
+\ \ \ \ \ \ paused:\ true,\
+\ \ \ \ \ \ roundHadHit:\ false,\
+\ \ \ \ \ \ nick:\ '',\
+\ \ \ \ \ \ lanes:\ 3,\
+\ \ \ \ \ \ laneH:\ 0,\
+\ \ \ \ \ \ keyDirY:\ 0,\
+\ \ \ \ \ \ speedY:\ 0,\
+\ \ \ \ \ \ baseSpeed:\ 240,\
+\ \ \ \ \ \ fastSpeed:\ 520,\
+\ \ \ \ \ \ particles:\ \[\],\
+\ \ \ \ \ \ speedlines:\ \[\],\
+\ \ \ \ \ \ dashTrail:\ \[\],\
+\ \ \ \ \ \ world:\ \{\ mode:\ 'clear',\ nextEventIn:\ 15000,\ t:\ 0,\ wind:\ 0,\ fog:\ 0\ \},\
+\ \ \ \ \ \ obstaclesThisRound:\ 0,\
+\ \ \ \ \ \ heart:\ null,\
+\ \ \ \ \ \ heartShownThisRound:\ false,\
+\ \ \ \ \ \ roundHadHit:\ false,\
+\ \ \ \ \ \ diff:\ \{\ t:0,\ level:0\ \},\
+\ \ \ \ \ \ debug:\ \{\ hitboxes:\ false,\ nearMiss:false\ \},\
+\ \ \ \ \};\
+\
+\ \ \ \ //\ =========\ UI\ refs\ =========\
+\ \ \ \ const\ hud\ =\ document\.getElementById\('hud'\);\
+\ \ \ \ const\ bbar\ =\ document\.getElementById\('bbar'\);\
+\ \ \ \ const\ nickLabel\ =\ document\.getElementById\('nickLabel'\);\
+\ \ \ \ const\ pointsCount\ =\ document\.getElementById\('pointsCount'\);\
+\ \ \ \ const\ obstaclesCount\ =\ document\.getElementById\('obstaclesCount'\);\
+\ \ \ \ const\ countdownLabel\ =\ document\.getElementById\('countdown'\);\
+\ \ \ \ const\ statusMsg\ =\ document\.getElementById\('statusMsg'\);\
+\ \ \ \ const\ endGame\ =\ document\.getElementById\('endGame'\);\
+\ \ \ \ const\ diffLabel\ =\ document\.getElementById\('diffLabel'\);\
+\
+\ \ \ \ const\ startMenu\ =\ document\.getElementById\('startMenu'\);\
+\ \ \ \ const\ menuNick\ =\ document\.getElementById\('menuNick'\);\
+\ \ \ \ const\ menuSave\ =\ document\.getElementById\('menuSave'\);\
+\ \ \ \ const\ menuStart\ =\ document\.getElementById\('menuStart'\);\
+\
+\ \ \ \ const\ adModal\ =\ document\.getElementById\('adModal'\);\
+\ \ \ \ const\ adBtn\ =\ document\.getElementById\('adBtn'\);\
+\ \ \ \ const\ laterBtn\ =\ document\.getElementById\('laterBtn'\);\
+\ \ \ \ const\ adError\ =\ document\.getElementById\('adError'\);\
+\
+\ \ \ \ const\ endModal\ =\ document\.getElementById\('endModal'\);\
+\ \ \ \ const\ endAdBtn\ =\ document\.getElementById\('endAdBtn'\);\
+\ \ \ \ const\ quitBtn\ =\ document\.getElementById\('quitBtn'\);\
+\ \ \ \ const\ endAdError\ =\ document\.getElementById\('endAdError'\);\
+\
+\ \ \ \ const\ toast\ =\ document\.getElementById\('toast'\);\
+\ \ \ \ const\ banner\ =\ document\.getElementById\('banner'\);\
+\
+\ \ \ \ //\ =========\ Utils\ =========\
+\ \ \ \ function\ mmss\(ms\)\{\ const\ s=Math\.max\(0,Math\.ceil\(ms/1000\)\);\ const\ m=Math\.floor\(s/60\);\ const\ r=s%60;\ return\ `\$\{String\(m\)\.padStart\(2,'0'\)\}:\$\{String\(r\)\.padStart\(2,'0'\)\}`;\ \}\
+\ \ \ \ function\ showToast\(msg,\ ms=1600\)\{\ toast\.textContent\ =\ msg;\ toast\.style\.display='block';\ setTimeout\(\(\)=>\ toast\.style\.display='none',\ ms\);\ \}\
+\ \ \ \ function\ setBanner\(text,\ type='success'\)\{\ banner\.classList\.remove\('success','fail'\);\ banner\.classList\.add\(type\);\ banner\.innerHTML=text;\ banner\.style\.display='block';\ \}\
+\ \ \ \ function\ safeSetStorage\(key,val\)\{\ try\{\ localStorage\.setItem\(key,val\);\ return\ true;\ \}\ catch\(e\)\{\ try\{\ sessionStorage\.setItem\(key,val\);\ return\ true;\ \}\ catch\(_\)\{\ return\ false;\ \}\ \}\ \}\
+\ \ \ \ function\ safeGetStorage\(key\)\{\ try\{\ return\ localStorage\.getItem\(key\)\ \?\?\ sessionStorage\.getItem\(key\)\ \?\?\ '';\ \}\ catch\(e\)\{\ try\{\ return\ sessionStorage\.getItem\(key\)\ \?\?\ '';\ \}\ catch\(_\)\{\ return\ '';\ \}\ \}\ \}\
+\ \ \ \ function\ setNick\(n\)\{\ state\.nick\ =\ n\.trim\(\);\ const\ ok\ =\ safeSetStorage\('gp_nick',\ state\.nick\);\ nickLabel\.textContent\ =\ state\.nick\ \|\|\ '—';\ if\(!ok\)\{\ showToast\('Uwaga:\ pamięć\ przeglądarki\ zablokowana\ –\ nick\ zapisany\ tymczasowo'\);\ \}\ \}\
+\ \ \ \ function\ validateNick\(val\)\{\ return\ val\.trim\(\)\.length\ >=\ 3;\ \}\
+\ \ \ \ function\ rand\(a,b\)\{\ return\ a\ \+\ Math\.random\(\)\*\(b\-a\);\ \}\
+\ \ \ \ function\ aabb\(a,b\)\{\ return\ !\(a\.x\+a\.w\ <\ b\.x\ \|\|\ a\.x\ >\ b\.x\+b\.w\ \|\|\ a\.y\+a\.h\ <\ b\.y\ \|\|\ a\.y\ >\ b\.y\+b\.h\);\ \}\
+\ \ \ \ function\ shrinkRect\(r,\ f\)\{\ const\ dw\ =\ r\.w\*\(1\-f\)/2,\ dh\ =\ r\.h\*\(1\-f\)/2;\ return\ \{\ x:r\.x\+dw,\ y:r\.y\+dh,\ w:r\.w\*\(f\),\ h:r\.h\*\(f\)\ \};\ \}\
+\
+\ \ \ \ //\ Load\ saved\ nick\ \(if\ any\)\
+\ \ \ \ const\ savedNick\ =\ safeGetStorage\('gp_nick'\);\
+\ \ \ \ if\(savedNick\)\{\ setNick\(savedNick\);\ menuNick\.value\ =\ savedNick;\ menuSave\.disabled\ =\ false;\ menuStart\.disabled\ =\ false;\ nickLabel\.textContent\ =\ savedNick;\ \}\
+\
+\ \ \ \ //\ =========\ Start\ menu\ =========\
+\ \ \ \ menuNick\.addEventListener\('input',\ \(\)=>\{\ const\ ok\ =\ validateNick\(menuNick\.value\);\ menuSave\.disabled\ =\ !ok;\ menuStart\.disabled\ =\ !ok;\ if\(ok\)\{\ setNick\(menuNick\.value\);\ \}\ \}\);\
+\ \ \ \ menuSave\.addEventListener\('click',\ \(\)=>\{\ if\(!menuSave\.disabled\)\{\ setNick\(menuNick\.value\);\ showToast\('Nick\ zapisany'\);\ \}\}\);\
+\ \ \ \ menuNick\.addEventListener\('keydown',\ \(e\)=>\{\ if\(e\.key==='Enter'\ \&\&\ !menuStart\.disabled\)\{\ menuStart\.click\(\);\ \}\}\);\
+\ \ \ \ menuStart\.addEventListener\('click',\ \(\)=>\{\
+\ \ \ \ \ \ if\(menuStart\.disabled\)\ return;\
+\ \ \ \ \ \ setNick\(menuNick\.value\);\
+\ \ \ \ \ \ startMenu\.style\.display\ =\ 'none';\
+\ \ \ \ \ \ hud\.style\.display\ =\ 'flex';\
+\ \ \ \ \ \ bbar\.style\.display\ =\ 'flex';\
+\ \ \ \ \ \ state\.paused\ =\ false;\ state\.started\ =\ true;\ state\.heart=null;\ state\.heartShownThisRound=false;\ state\.roundHadHit=false;\
+\ \ \ \ \ \ setTimeout\(\(\)=>\{\ try\{\ canvas\.focus\(\);\ \}catch\(e\)\{\}\ \},\ 0\);\
+\ \ \ \ \ \ setTimeout\(\(\)=>\{\ setBanner\('Omijaj\ przeszkody\ –\ bonus\ <b>\+1\ pkt</b>\ w\ zasięgu!','success'\);\ \},\ 500\);\
+\ \ \ \ \}\);\
+\
+\ \ \ \ //\ =========\ Monetag:\ używamy\ dokładnie\ show_9687992\(\)\.then\(\.\.\.\)\ =========\
+\ \ \ \ async\ function\ playRewarded\(\)\{\
+\ \ \ \ \ \ if\(typeof\ window\.show_9687992\ !==\ 'function'\)\{\
+\ \ \ \ \ \ \ \ throw\ new\ Error\('Brak\ funkcji\ show_9687992\ –\ wklej\ tag\ Monetag\ do\ <head>\.'\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ return\ window\.show_9687992\(\)\.then\(\(\)=>\{\}\);\
+\ \ \ \ \}\
+\
+\ \ \ \ //\ =========\ Obstacles\ =========\
+\ \ \ \ //\ types:\ crate,\ cone,\ barrel\(circle\),\ saw\(rotating\),\ pendulum\(weight\ on\ rope\),\ zigzag\(drone\),\ hopper\(jumping\ box\)\
+\ \ \ \ function\ spawnObstacle\(\)\{\
+\ \ \ \ \ \ const\ lane\ =\ Math\.floor\(Math\.random\(\)\*state\.lanes\);\
+\ \ \ \ \ \ const\ laneH\ =\ state\.laneH;\
+\ \ \ \ \ \ const\ r\ =\ Math\.random\(\);\
+\ \ \ \ \ \ let\ type='crate';\
+\ \ \ \ \ \ if\(r<0\.17\)\ type='cone';\
+\ \ \ \ \ \ else\ if\(r<0\.34\)\ type='barrel';\
+\ \ \ \ \ \ else\ if\(r<0\.51\)\ type='saw';\
+\ \ \ \ \ \ else\ if\(r<0\.68\)\ type='pendulum';\
+\ \ \ \ \ \ else\ if\(r<0\.85\)\ type='zigzag';\
+\ \ \ \ \ \ else\ type='hopper';\
+\
+\ \ \ \ \ \ let\ o\ =\ \{\ type,\ x:\ canvas\.clientWidth\ \+\ 60,\ y:\ lane\*laneH\ \+\ 8,\ w:\ 36,\ h:\ 36,\ speed:\ state\.speed\*\(1\.0\+Math\.min\(0\.5,state\.diff\.level\*0\.01\)\)\ \};\
+\ \ \ \ \ \ if\(type==='cone'\)\{\ o\.w=28;\ o\.h=46;\ o\.y\ =\ lane\*laneH\ \+\ \(laneH\ \-\ o\.h\)/2;\ \}\
+\ \ \ \ \ \ if\(type==='barrel'\)\{\ o\.r\ =\ 16;\ o\.w=o\.h=\ o\.r\*2;\ o\.spin=0;\ o\.y\ =\ lane\*laneH\ \+\ \(laneH\ \-\ o\.h\)/2;\ \}\
+\ \ \ \ \ \ if\(type==='saw'\)\{\ o\.r=14;\ o\.w=o\.h=o\.r\*2;\ o\.spin=0\.25\+Math\.random\(\)\*0\.6;\ o\.y\ =\ lane\*laneH\ \+\ \(laneH\ \-\ o\.h\)/2;\ \}\
+\ \ \ \ \ \ if\(type==='pendulum'\)\{\ o\.ancY\ =\ lane\*laneH\ \+\ 8;\ o\.ancX\ =\ canvas\.clientWidth\ \+\ 60;\ o\.len\ =\ laneH\-12;\ o\.angle\ =\ Math\.random\(\)\*0\.6\ \-\ 0\.3;\ o\.angVel\ =\ \(Math\.random\(\)<\.5\?\-1:1\)\*\ \(0\.7\+Math\.random\(\)\*0\.6\);\ o\.w=o\.h=18;\ o\.x=o\.ancX;\ o\.y=o\.ancY\ \+\ o\.len;\ \}\
+\ \ \ \ \ \ if\(type==='zigzag'\)\{\ o\.w=28;\ o\.h=22;\ o\.vy\ =\ \(Math\.random\(\)<\.5\?\-1:1\)\ \*\ rand\(60,120\);\ o\.y\ =\ lane\*laneH\ \+\ \(laneH\ \-\ o\.h\)/2;\ \}\
+\ \ \ \ \ \ if\(type==='hopper'\)\{\ o\.w=30;\ o\.h=28;\ o\.vy\ =\ \-rand\(140,\ 220\);\ o\.g\ =\ 420;\ o\.y\ =\ lane\*laneH\ \+\ laneH\ \-\ o\.h\ \-\ 4;\ \}\ //\ skacze\ po\ pasie\
+\
+\ \ \ \ \ \ //\ safety\ vertical\ gap\ vs\ player\
+\ \ \ \ \ \ const\ minGap\ =\ 20;\
+\ \ \ \ \ \ const\ centerY\ =\ o\.y\ \+\ \(o\.h\|\|o\.r\|\|0\)/2;\
+\ \ \ \ \ \ const\ pCenterY\ =\ state\.player\.y\ \+\ state\.player\.h/2;\
+\ \ \ \ \ \ const\ avoid\ =\ Math\.abs\(pCenterY\ \-\ centerY\)\ <\ \(state\.player\.h/2\ \+\ \(o\.h\|\|o\.r\|\|0\)/2\ \+\ minGap\);\
+\ \ \ \ \ \ if\(avoid\ \&\&\ type!=='pendulum'\)\{\
+\ \ \ \ \ \ \ \ o\.y\ =\ Math\.max\(0,\ Math\.min\(canvas\.clientHeight\ \-\ \(o\.h\|\|o\.r\*2\),\ o\.y\ \+\ \(o\.y>state\.player\.y\?\ minGap\ :\ \-minGap\)\)\);\
+\ \ \ \ \ \ \}\
+\
+\ \ \ \ \ \ state\.obstacles\.push\(o\);\
+\ \ \ \ \ \ state\.obstaclesThisRound\ \+=\ 1;\ obstaclesCount\.textContent\ =\ String\(state\.obstaclesThisRound\);\
+\ \ \ \ \}\
+\
+\ \ \ \ //\ =========\ Hazards\ \(jak\ w\ v25,\ lekko\ dostrojone\)\ =========\
+\ \ \ \ function\ spawnHazard\(\)\{\
+\ \ \ \ \ \ const\ t\ =\ Math\.random\(\);\
+\ \ \ \ \ \ const\ lane\ =\ Math\.floor\(Math\.random\(\)\*state\.lanes\);\
+\ \ \ \ \ \ const\ yLane\ =\ lane\*state\.laneH;\
+\ \ \ \ \ \ if\(t\ <\ 0\.35\)\{\ //\ laser\
+\ \ \ \ \ \ \ \ const\ h\ =\ 28,\ w\ =\ 10;\
+\ \ \ \ \ \ \ \ state\.hazards\.push\(\{\ kind:'laser',\ x:\ canvas\.clientWidth\ \+\ 40,\ y:\ yLane\ \+\ \(state\.laneH\ \-\ h\)/2,\ w,\ h,\ speed:\ 150,\ phase:\ Math\.random\(\)\*Math\.PI\*2,\ period:\ 1100\ \}\);\
+\ \ \ \ \ \ \}\ else\ if\(t\ <\ 0\.65\)\{\ //\ oil\
+\ \ \ \ \ \ \ \ const\ h\ =\ 26,\ w\ =\ 70;\
+\ \ \ \ \ \ \ \ state\.hazards\.push\(\{\ kind:'oil',\ x:\ canvas\.clientWidth\ \+\ 40,\ y:\ yLane\ \+\ \(state\.laneH\ \-\ h\)/2,\ w,\ h,\ speed:\ 170,\ slip:\ 0\.55\ \}\);\
+\ \ \ \ \ \ \}\ else\ \{\ //\ wall\
+\ \ \ \ \ \ \ \ const\ w\ =\ 22,\ h\ =\ state\.laneH\ \-\ 6;\
+\ \ \ \ \ \ \ \ state\.hazards\.push\(\{\ kind:'wall',\ x:\ canvas\.clientWidth\ \+\ 40,\ y:\ yLane\ \+\ 3,\ w,\ h,\ speed:\ 180\ \}\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ //\ =========\ Collisions\ =========\
+\ \ \ \ function\ collidesPlayerObstacle\(p,\ o\)\{\
+\ \ \ \ \ \ const\ pf\ =\ shrinkRect\(\{x:p\.x,y:p\.y,w:p\.w,h:p\.h\},\ 0\.9\);\
+\ \ \ \ \ \ if\(o\.type==='cone'\)\{\
+\ \ \ \ \ \ \ \ const\ of\ =\ \{\ x:o\.x\ \+\ o\.w\*0\.2,\ y:o\.y\ \+\ o\.h\*0\.05,\ w:o\.w\*0\.6,\ h:o\.h\*0\.9\ \};\
+\ \ \ \ \ \ \ \ return\ aabb\(pf,\ of\);\
+\ \ \ \ \ \ \}\ else\ if\(o\.type==='barrel'\ \|\|\ o\.type==='saw'\ \|\|\ o\.type==='pendulum'\)\{\
+\ \ \ \ \ \ \ \ //\ circle\ collide\
+\ \ \ \ \ \ \ \ const\ cx\ =\ \(o\.type==='pendulum'\)\ \?\ o\.x\ :\ o\.x\ \+\ o\.r;\
+\ \ \ \ \ \ \ \ const\ cy\ =\ \(o\.type==='pendulum'\)\ \?\ o\.y\ :\ o\.y\ \+\ o\.r;\
+\ \ \ \ \ \ \ \ const\ r\ =\ \(o\.type==='saw'\)\ \?\ o\.r\*0\.85\ :\ \(o\.type==='barrel'\ \?\ o\.r\*0\.9\ :\ 9\);\
+\ \ \ \ \ \ \ \ const\ rx\ =\ Math\.max\(pf\.x,\ Math\.min\(cx,\ pf\.x\+pf\.w\)\);\
+\ \ \ \ \ \ \ \ const\ ry\ =\ Math\.max\(pf\.y,\ Math\.min\(cy,\ pf\.y\+pf\.h\)\);\
+\ \ \ \ \ \ \ \ const\ dx\ =\ cx\ \-\ rx,\ dy\ =\ cy\ \-\ ry;\
+\ \ \ \ \ \ \ \ return\ \(dx\*dx\ \+\ dy\*dy\)\ <=\ r\*r;\
+\ \ \ \ \ \ \}\ else\ if\(o\.type==='zigzag'\ \|\|\ o\.type==='hopper'\ \|\|\ o\.type==='crate'\)\{\
+\ \ \ \ \ \ \ \ const\ of\ =\ shrinkRect\(\{x:o\.x,y:o\.y,w:o\.w,h:o\.h\},\ 0\.85\);\
+\ \ \ \ \ \ \ \ return\ aabb\(pf,\ of\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ return\ false;\
+\ \ \ \ \}\
+\ \ \ \ function\ collidesPlayerHazard\(p,\ h\)\{\
+\ \ \ \ \ \ const\ pf\ =\ shrinkRect\(\{x:p\.x,y:p\.y,w:p\.w,h:p\.h\},\ 0\.9\);\
+\ \ \ \ \ \ if\(h\.kind==='oil'\)\{\ return\ aabb\(pf,\ h\);\ \}\
+\ \ \ \ \ \ if\(h\.kind==='wall'\)\{\ const\ of\ =\ shrinkRect\(h,\ 0\.92\);\ return\ aabb\(pf,\ of\);\ \}\
+\ \ \ \ \ \ if\(h\.kind==='laser'\)\{\
+\ \ \ \ \ \ \ \ const\ active\ =\ Math\.sin\(\(performance\.now\(\)%100000\)/h\.period\ \+\ h\.phase\)\ >\ 0\.35;\
+\ \ \ \ \ \ \ \ if\(!active\)\ return\ false;\
+\ \ \ \ \ \ \ \ const\ of\ =\ \{\ x:h\.x\-2,\ y:h\.y,\ w:h\.w\+4,\ h:h\.h\ \};\
+\ \ \ \ \ \ \ \ return\ aabb\(pf,\ of\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ return\ false;\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ onHit\(\)\{\
+\ \ \ \ \ \ state\.roundHadHit\ =\ true;\
+\ \ \ \ \ \ setBanner\('Bonus\ stracony\ –\ powodzenia\ w\ następnej\ rundzie!','fail'\);\
+\ \ \ \ \ \ showToast\('Uwaga!\ Unikaj\ przeszkód'\);\
+\ \ \ \ \ \ canvas\.classList\.add\('shake'\);\ setTimeout\(\(\)=>\ canvas\.classList\.remove\('shake'\),\ 200\);\
+\ \ \ \ \ \ state\.player\.inv\ =\ 550;\
+\ \ \ \ \ \ //\ hit\ spark\
+\ \ \ \ \ \ for\(let\ i=0;i<10;i\+\+\)\{\ state\.particles\.push\(\{\ x:\ state\.player\.x\+10,\ y:\ state\.player\.y\+state\.player\.h/2,\ r:\ 2,\ v:\ \-50\-rand\(0,80\),\ a:\ 1,\ ttl:\ 300\ \}\);\ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ //\ =========\ Input\ \+\ FX\ =========\
+\ \ \ \ function\ tryDash\(\)\{\
+\ \ \ \ \ \ if\(state\.player\.dashCd<=0\)\{\
+\ \ \ \ \ \ \ \ state\.player\.inv\ =\ 600;\ state\.player\.dashCd\ =\ 5000;\ showToast\('Dash!'\);\
+\ \ \ \ \ \ \ \ //\ dash\ trail\
+\ \ \ \ \ \ \ \ state\.dashTrail\.push\(\{\ x:\ state\.player\.x,\ y:\ state\.player\.y,\ w:\ state\.player\.w,\ h:\ state\.player\.h,\ a:\ 0\.6,\ ttl:\ 240\ \}\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\ \ \ \ window\.addEventListener\('keydown',\ \(e\)=>\{\
+\ \ \ \ \ \ if\(\['ArrowUp','ArrowDown','w','W','s','S','\ '\]\.includes\(e\.key\)\ \|\|\ e\.code==='Space'\)\ e\.preventDefault\(\);\
+\ \ \ \ \ \ if\(e\.key==='h'\ \|\|\ e\.key==='H'\)\{\ state\.debug\.hitboxes\ =\ !state\.debug\.hitboxes;\ return;\ \}\
+\ \ \ \ \ \ if\(state\.paused\)\ return;\
+\ \ \ \ \ \ const\ setDir\ =\ \(dir\)=>\{\ state\.keyDirY\ =\ dir;\ state\.speedY\ =\ state\.baseSpeed\ \*\ dir;\ clearTimeout\(state\.accelTO\);\ clearInterval\(state\.repeatIV\);\ state\.accelTO\ =\ setTimeout\(\(\)=>\{\ state\.speedY\ =\ state\.fastSpeed\ \*\ dir;\ \},\ 200\);\ \};\
+\ \ \ \ \ \ if\(e\.key\ ===\ 'ArrowUp'\ \|\|\ e\.key\ ===\ 'w'\ \|\|\ e\.key==='W'\)\ setDir\(\-1\);\
+\ \ \ \ \ \ if\(e\.key\ ===\ 'ArrowDown'\ \|\|\ e\.key\ ===\ 's'\ \|\|\ e\.key==='S'\)\ setDir\(1\);\
+\ \ \ \ \ \ if\(e\.code\ ===\ 'Space'\ \|\|\ e\.key==='\ '\)\ tryDash\(\);\
+\ \ \ \ \}\);\
+\ \ \ \ window\.addEventListener\('keyup',\ \(e\)=>\{\
+\ \ \ \ \ \ if\(\['ArrowUp','ArrowDown','w','W','s','S'\]\.includes\(e\.key\)\)\{\
+\ \ \ \ \ \ \ \ if\(\(e\.key==='ArrowUp'\|\|e\.key==='w'\|\|e\.key==='W'\)\ \&\&\ state\.keyDirY<0\)\ \{\ state\.keyDirY=0;\ state\.speedY=0;\ \}\
+\ \ \ \ \ \ \ \ if\(\(e\.key==='ArrowDown'\|\|e\.key==='s'\|\|e\.key==='S'\)\ \&\&\ state\.keyDirY>0\)\ \{\ state\.keyDirY=0;\ state\.speedY=0;\ \}\
+\ \ \ \ \ \ \ \ clearTimeout\(state\.accelTO\);\ clearInterval\(state\.repeatIV\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\);\
+\ \ \ \ let\ lastTap=0;\ canvas\.addEventListener\('touchstart',\ \(e\)=>\{\
+\ \ \ \ \ \ e\.preventDefault\(\);\ if\(state\.paused\)\ return;\
+\ \ \ \ \ \ const\ now=Date\.now\(\);\ if\(now\ \-\ \(window\.__lastTap\|\|0\)\ <\ 280\)\ \{\ tryDash\(\);\ \}\ window\.__lastTap\ =\ now;\ state\._lastY\ =\ e\.touches\[0\]\.clientY;\
+\ \ \ \ \},\ \{passive:false\}\);\
+\ \ \ \ canvas\.addEventListener\('touchmove',\ \(e\)=>\{\
+\ \ \ \ \ \ e\.preventDefault\(\);\ if\(state\.paused\)\ return;\
+\ \ \ \ \ \ const\ dy\ =\ e\.touches\[0\]\.clientY\ \-\ \(state\._lastY\ \?\?\ e\.touches\[0\]\.clientY\);\
+\ \ \ \ \ \ state\._lastY\ =\ e\.touches\[0\]\.clientY;\ state\.player\.y\ \+=\ dy\ \*\ 0\.6;\
+\ \ \ \ \},\ \{passive:false\}\);\
+\ \ \ \ canvas\.addEventListener\('touchend',\ \(\)=>\{\ state\._lastY\ =\ null;\ \}\);\
+\
+\ \ \ \ //\ =========\ Countdown\ /\ Ads\ =========\
+\ \ \ \ function\ updateCountdown\(dt\)\{\
+\ \ \ \ \ \ if\(!state\.started\)\ return;\
+\ \ \ \ \ \ if\(state\.countdown\ >\ 0\)\{\
+\ \ \ \ \ \ \ \ state\.countdown\ \-=\ dt;\
+\ \ \ \ \ \ \ \ if\(state\.countdown\ <=\ 0\)\{\ state\.countdown\ =\ 0;\ onCheckpointReady\(\);\ \}\
+\ \ \ \ \ \ \ \ countdownLabel\.textContent\ =\ mmss\(state\.countdown\);\
+\ \ \ \ \ \ \ \ if\(state\.countdown\ <\ 11000\ \&\&\ !state\._warned\)\{\ state\._warned\ =\ true;\ statusMsg\.textContent\ =\ 'Za\ chwilę\ dostępna\ reklama';\ \}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\ \ \ \ function\ onCheckpointReady\(\)\{\
+\ \ \ \ \ \ statusMsg\.textContent\ =\ 'Reklama\ dostępna';\
+\ \ \ \ \ \ state\.paused\ =\ true;\
+\ \ \ \ \ \ const\ titleEl\ =\ document\.getElementById\('adTitle'\);\
+\ \ \ \ \ \ const\ textEl\ =\ document\.getElementById\('adText'\);\
+\ \ \ \ \ \ if\(!state\.roundHadHit\)\{\ titleEl\.textContent\ =\ 'Runda\ czysta!';\ textEl\.innerHTML\ =\ 'Gratulacje,\ ominąłeś\ wszystkie\ przeszkody\.\ Obejrzyj\ reklamę,\ aby\ zdobyć\ <b>2\ pkt</b>\.';\ \}\
+\ \ \ \ \ \ else\ \{\ titleEl\.textContent\ =\ 'Checkpoint';\ textEl\.innerHTML\ =\ 'Obejrzyj\ reklamę,\ aby\ zdobyć\ <b>1\ pkt</b>\ i\ biec\ dalej\.';\ \}\
+\ \ \ \ \ \ laterBtn\.style\.display\ =\ 'none';\
+\ \ \ \ \ \ adModal\.style\.display\ =\ 'flex';\ adError\.style\.display='none';\
+\ \ \ \ \}\
+\ \ \ \ function\ resetCountdown\(\)\{\
+\ \ \ \ \ \ state\.countdown\ =\ 120000;\ state\._warned\ =\ false;\ countdownLabel\.textContent\ =\ mmss\(state\.countdown\);\
+\ \ \ \ \ \ statusMsg\.textContent\ =\ '';\ state\.roundHadHit\ =\ false;\ state\.obstaclesThisRound\ =\ 0;\ obstaclesCount\.textContent\ =\ '0';\
+\ \ \ \ \ \ setBanner\('Omijaj\ przeszkody\ –\ bonus\ <b>\+1\ pkt</b>\ w\ zasięgu!','success'\);\ state\.paused\ =\ false;\ laterBtn\.style\.display\ =\ '';\
+\ \ \ \ \
+\ \ \ \ \ \ state\.heart=null;\ state\.heartShownThisRound=false;\ state\.roundHadHit=false;\
+\}\
+\
+\ \ \ \ //\ ======\ Bind\ buttons\ to\ Monetag\ ======\
+\ \ \ \ adBtn\.addEventListener\('click',\ async\ \(\)=>\{\
+\ \ \ \ \ \ adBtn\.disabled\ =\ true;\ adError\.style\.display='none';\
+\ \ \ \ \ \ if\ \(typeof\ show_9687992\ ===\ 'function'\)\ \{\
+\ \ \ \ \ \ \ \ show_9687992\(\)\.then\(\(\)=>\{\
+\ \ \ \ \ \ \ \ \ \ let\ gained\ =\ state\.roundHadHit\ \?\ 1\ :\ 2;\
+\ \ \ \ \ \ \ \ \ \ if\ \(typeof\ setPoints==='function'\)\{\ setPoints\(state\.points\ \+\ gained\);\ \}\ \
+\ \ \ \ \ \ \ \ \ \ else\ \{\ state\.points\ \+=\ gained;\ pointsCount\.textContent\ =\ String\(state\.points\);\ \}\
+\ \ \ \ \ \ \ \ \ \ showToast\(`Gratulacje,\ zdobywasz\ \+\$\{gained\}\ pkt`,\ 'success'\);\
+\ \ \ \ \ \ \ \ \ \ resetCountdown\(\);\
+\ \ \ \ \ \ \ \ \ \ adModal\.style\.display\ =\ 'none';\
+\ \ \ \ \ \ \ \ \}\)\.catch\(err=>\{\
+\ \ \ \ \ \ \ \ \ \ console\.error\('Ad\ error',\ err\);\
+\ \ \ \ \ \ \ \ \ \ adError\.style\.display='block';\
+\ \ \ \ \ \ \ \ \}\)\.finally\(\(\)=>\{\
+\ \ \ \ \ \ \ \ \ \ adBtn\.disabled\ =\ false;\
+\ \ \ \ \ \ \ \ \}\);\
+\ \ \ \ \ \ \}\ else\ \{\
+\ \ \ \ \ \ \ \ adError\.style\.display='block';\
+\ \ \ \ \ \ \ \ adBtn\.disabled\ =\ false;\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\);\
+\
+\ \ \ \ //\ removed\ endGame\
+\ \ \ \ \}\
+\ \ \ \ \ \ \ \ await\ window\.show_9687992\(\)\.then\(\(\)=>\{\}\);\
+\ \ \ \ \ \ \ \ showToast\('Postęp\ zapisany'\);\ window\.location\.hash\ =\ '\#exit';\
+\ \ \ \ \ \ \}\ catch\(err\)\{\ endAdError\.style\.display='block';\ \}\
+\ \ \ \ \ \ finally\ \{\ endAdBtn\.disabled\ =\ false;\ \}\
+\ \ \ \ \}\);\
+\ \ \ \ //\ =========\ Update\ =========\
+\ \ \ \ \
+\ \ \ \ //\ Heart\ sprite\ image\
+\ \ \ \ const\ heartImg\ =\ new\ Image\(\);\
+\ \ \ \ heartImg\.src\ =\ 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAcCAYAAAAAwr0iAAAA2UlEQVR4nMVW0RXDIAgEXzdpxmin6hydqhmjnSX5ynvUCAFEvC81Htw7iIrA4AuPrV5bYEVuv5dftGRpvYd/UkQ33bfP\+xj/8Pk6xpITGpGU/\+cAl7yeRzpUWovWID38Zg9kghVAa96aR\+EmfRyVlAIB7PWLRAGwHTCRWGDFQifZyQEm/QXsQZThQp3j5EB2KZolGCVCfRtmJRcFRLogxRIdiBBxFeOyBD0iNFxVD3hEaDlDmtAiWC1AG9TqlsmBEeeDuQSSCI/AsB7wuuMSUCeb9Z6Y\+pIKww5belCAoKsZpAAAAABJRU5ErkJggg==';\
+\
+\ \ \ \ function\ spawnHeart\(\)\{\
+\ \ \ \ \ \ const\ lane\ =\ Math\.floor\(Math\.random\(\)\*state\.lanes\);\
+\ \ \ \ \ \ const\ laneH\ =\ canvas\.clientHeight\ /\ state\.lanes;\
+\ \ \ \ \ \ const\ size\ =\ 30;\
+\ \ \ \ \ \ const\ y\ =\ lane\*laneH\ \+\ \(laneH\-size\)/2;\
+\ \ \ \ \ \ state\.heart\ =\ \{\ x:\ canvas\.clientWidth\ \+\ 20,\ y:\ y,\ w:\ size,\ h:\ size,\ vy:0\ \};\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ drawHeart\(\)\{\
+\ \ \ \ \ \ if\(!state\.heart\)\ return;\
+\ \ \ \ \ \ const\ h\ =\ state\.heart;\
+\ \ \ \ \ \ const\ bob\ =\ Math\.sin\(state\.world\.t\*6\)\ \*\ 3;\
+\ \ \ \ \ \ try\{\ ctx\.drawImage\(heartImg,\ h\.x,\ h\.y\ \+\ bob,\ h\.w,\ h\.h\);\ \}catch\(e\)\{\
+\ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#e11d48';\ ctx\.fillRect\(h\.x,\ h\.y\ \+\ bob,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ updateHeart\(dt\)\{\
+\ \ \ \ \ \ if\(!state\.heart\)\ return;\
+\ \ \ \ \ \ const\ h\ =\ state\.heart;\
+\ \ \ \ \ \ h\.x\ \-=\ state\.speed\ \*\ dt/1000;\
+\ \ \ \ \ \ const\ hb\ =\ \{\ x:h\.x\+2,\ y:h\.y\+2,\ w:h\.w\-4,\ h:h\.h\-4\ \};\ //\ slightly\ easier\ hitbox\
+\ \ \ \ \ \ const\ pb\ =\ \{\ x:\ state\.player\.x,\ y:\ state\.player\.y,\ w:\ state\.player\.w,\ h:\ state\.player\.h\ \};\
+\ \ \ \ \ \ if\(\ aabb\(\ hb,\ pb\ \)\ \)\{\
+\ \ \ \ \ \ \ \ state\.roundHadHit\ =\ false;\ //\ restore\ clean\ run\ bonus\
+\ \ \ \ \ \ \ \ setBanner\('Bonus\ odzyskany!','success'\);\
+\ \ \ \ \ \ \ \ state\.heart\ =\ null;\
+\ \ \ \ \ \ \ \ state\.heartShownThisRound\ =\ true;\
+\ \ \ \ \ \ \}\ else\ if\(h\.x\ \+\ h\.w\ <\ \-10\)\{\
+\ \ \ \ \ \ \ \ state\.heart\ =\ null;\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ update\(dt\)\{\
+\
+\ \ \ \ \ \ if\(state\.paused\)\ return;\
+\ \ \ \ \ \ state\.laneH\ =\ canvas\.clientHeight\ /\ state\.lanes;\
+\ \ \ \ \ \ state\.world\.t\ \+=\ dt/1000;\ state\.diff\.t\ \+=\ dt;\
+\ \ \ \ \ \ const\ lvl\ =\ Math\.floor\(state\.diff\.t/1000\);\
+\ \ \ \ \ \ if\(lvl\ !==\ state\.diff\.level\)\{\
+\ \ \ \ \ \ \ \ state\.diff\.level\ =\ lvl;\ diffLabel\.textContent\ =\ String\(lvl\);\
+\ \ \ \ \ \ \ \ state\.speed\ =\ 170\ \+\ Math\.min\(220,\ lvl\*1\.7\);\
+\ \ \ \ \ \ \ \ if\(lvl\ %\ 6\ ===\ 0\)\{\ state\.world\.fog\ =\ 1\.0;\ \}\
+\ \ \ \ \ \ \ \ if\(lvl\ >\ 25\)\{\ state\.world\.wind\ =\ Math\.sin\(state\.world\.t\*0\.8\)\ \*\ Math\.min\(70,\ \(lvl\-25\)\*1\.8\);\ \}\
+\ \ \ \ \ \ \}\
+\
+\ \ \ \ \ \ //\ Timers\
+\ \ \ \ \ \ if\(state\.player\.inv>0\)\ state\.player\.inv\ \-=\ dt;\
+\ \ \ \ \ \ if\(state\.player\.dashCd>0\)\ state\.player\.dashCd\ \-=\ dt;\
+\ \ \ \ \ \ if\(state\.started\)\ updateCountdown\(dt\);\
+\
+\ \ \ \ \ \ //\ Spawns\
+\ \ \ \ \ \ state\.nextObstacleIn\ \-=\ dt;\
+\ \ \ \ \ \ if\(state\.nextObstacleIn\ <=\ 0\)\{\ spawnObstacle\(\);\ state\.nextObstacleIn\ =\ 760\ \-\ Math\.min\(520,\ state\.diff\.level\*7\)\ \+\ Math\.random\(\)\*280;\ \}\
+\ \ \ \ \ \ state\.nextHazardIn\ \-=\ dt;\
+\ \ \ \ \ \ if\(state\.nextHazardIn\ <=\ 0\)\{\ spawnHazard\(\);\ state\.nextHazardIn\ =\ 3800\ \-\ Math\.min\(2600,\ state\.diff\.level\*55\)\ \+\ Math\.random\(\)\*900;\ \}\
+\
+\ \ \ \ \ \ //\ Move\ obstacles\
+\ \ \ \ \ \ for\(const\ o\ of\ state\.obstacles\)\{\
+\ \ \ \ \ \ \ \ //\ collision\ with\ player\
+\ \ \ \ \ \ \ \ const\ pb\ =\ \{\ x:\ state\.player\.x,\ y:\ state\.player\.y,\ w:\ state\.player\.w,\ h:\ state\.player\.h\ \};\
+\ \ \ \ \ \ \ \ const\ ob\ =\ \{\ x:o\.x,\ y:o\.y,\ w:o\.w,\ h:o\.h\ \};\
+\ \ \ \ \ \ \ \ if\(aabb\(pb,\ ob\)\)\{\
+\ \ \ \ \ \ \ \ \ \ if\(!state\.roundHadHit\)\{\
+\ \ \ \ \ \ \ \ \ \ \ \ state\.roundHadHit\ =\ true;\
+\ \ \ \ \ \ \ \ \ \ \ \ setBanner\('Dajemy\ ci\ jeszcze\ szansę\ na\ bonus!\ Złap\ serduszko\ i\ odzyskaj\ bonus!','warning'\);\
+\ \ \ \ \ \ \ \ \ \ \ \ if\(!state\.heartShownThisRound\)\{\ setTimeout\(spawnHeart,\ 1500\);\ state\.heartShownThisRound\ =\ true;\ \}\
+\ \ \ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \
+\ \ \ \ \ \ \ \ o\.x\ \-=\ \(o\.speed\ \*\ dt/1000\);\
+\ \ \ \ \ \ \ \ if\(o\.type==='saw'\)\{\ o\.spin\ \+=\ 6\*dt/1000;\ \}\
+\ \ \ \ \ \ \ \ if\(o\.type==='zigzag'\)\{\ o\.y\ \+=\ o\.vy\ \*\ dt/1000;\ if\(o\.y<0\ \|\|\ o\.y\+o\.h>canvas\.clientHeight\)\{\ o\.vy\ \*=\ \-1;\ \}\ \}\
+\ \ \ \ \ \ \ \ if\(o\.type==='hopper'\)\{\
+\ \ \ \ \ \ \ \ \ \ o\.vy\ \+=\ o\.g\ \*\ dt/1000;\ o\.y\ \+=\ o\.vy\ \*\ dt/1000;\
+\ \ \ \ \ \ \ \ \ \ const\ laneBottom\ =\ Math\.floor\(o\.y/state\.laneH\)\*state\.laneH\ \+\ state\.laneH\ \-\ o\.h\ \-\ 4;\
+\ \ \ \ \ \ \ \ \ \ if\(o\.y\ >\ laneBottom\)\{\ o\.y\ =\ laneBottom;\ o\.vy\ =\ \-rand\(140,\ 240\);\ \}\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \ \ if\(o\.type==='pendulum'\)\{\
+\ \ \ \ \ \ \ \ \ \ o\.angle\ \+=\ o\.angVel\ \*\ dt/1000;\
+\ \ \ \ \ \ \ \ \ \ const\ px\ =\ o\.ancX\ \-\ \(o\.speed\ \*\ dt/1000\);\ o\.ancX\ =\ px;\ //\ punkt\ kotwiczenia\ leci\ w\ lewo\
+\ \ \ \ \ \ \ \ \ \ o\.x\ =\ o\.ancX\ \+\ Math\.sin\(o\.angle\)\*o\.len;\ o\.y\ =\ o\.ancY\ \+\ Math\.cos\(o\.angle\)\*o\.len;\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ state\.obstacles\ =\ state\.obstacles\.filter\(o\ =>\ \(o\.x\ \+\ \(o\.w\|\|o\.r\*2\)\)\ >\ \-60\);\
+\
+\ \ \ \ \ \ //\ Move\ hazards\
+\ \ \ \ \ \ for\(const\ h\ of\ state\.hazards\)\{\
+\ \ \ \ \ \ \ \ if\(h\.kind==='fall'\)\{\ h\.y\ \+=\ \(h\.vy\|\|180\)\ \*\ dt/1000;\ \}\
+\ \ \ \ \ \ \ \ else\ \{\ h\.x\ \-=\ \(\ \(h\.speed\|\|160\)\ \*\ dt/1000\ \);\ \}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ state\.hazards\ =\ state\.hazards\.filter\(h\ =>\ \(h\.y\ <\ canvas\.clientHeight\ \+\ 60\)\ \&\&\ \(h\.x\ \+\ \(h\.w\|\|20\)\ >\ \-60\)\);\
+\
+\ \ \ \ \ \ //\ Collisions\
+\ \ \ \ \ \ let\ collided\ =\ false;\
+\ \ \ \ \ \ if\(state\.player\.inv<=0\)\{\
+\ \ \ \ \ \ \ \ for\(const\ o\ of\ state\.obstacles\)\{\
+\ \ \ \ \ \ \ \ //\ collision\ with\ player\
+\ \ \ \ \ \ \ \ const\ pb\ =\ \{\ x:\ state\.player\.x,\ y:\ state\.player\.y,\ w:\ state\.player\.w,\ h:\ state\.player\.h\ \};\
+\ \ \ \ \ \ \ \ const\ ob\ =\ \{\ x:o\.x,\ y:o\.y,\ w:o\.w,\ h:o\.h\ \};\
+\ \ \ \ \ \ \ \ if\(aabb\(pb,\ ob\)\)\{\
+\ \ \ \ \ \ \ \ \ \ if\(!state\.roundHadHit\)\{\
+\ \ \ \ \ \ \ \ \ \ \ \ state\.roundHadHit\ =\ true;\
+\ \ \ \ \ \ \ \ \ \ \ \ setBanner\('Dajemy\ ci\ jeszcze\ szansę\ na\ bonus!\ Złap\ serduszko\ i\ odzyskaj\ bonus!','warning'\);\
+\ \ \ \ \ \ \ \ \ \ \ \ if\(!state\.heartShownThisRound\)\{\ setTimeout\(spawnHeart,\ 1500\);\ state\.heartShownThisRound\ =\ true;\ \}\
+\ \ \ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ if\(collidesPlayerObstacle\(state\.player,\ o\)\)\{\ onHit\(\);\ collided=true;\ break;\ \}\ \}\
+\ \ \ \ \ \ \ \ if\(!collided\)\{\ for\(const\ h\ of\ state\.hazards\)\{\ if\(collidesPlayerHazard\(state\.player,\ h\)\)\{\ onHit\(\);\ collided=true;\ break;\ \}\ \}\ \}\
+\ \ \ \ \ \ \}\
+\
+\ \ \ \ \ \ //\ Controls\ \+\ physics\
+\ \ \ \ \ \ let\ slipFactor\ =\ 1\.0;\
+\ \ \ \ \ \ for\(const\ h\ of\ state\.hazards\)\{\ if\(h\.kind==='oil'\ \&\&\ aabb\(\{x:state\.player\.x,y:state\.player\.y,w:state\.player\.w,h:state\.player\.h\},\ h\)\)\{\ slipFactor\ =\ Math\.min\(slipFactor,\ h\.slip\|\|0\.6\);\ \}\ \}\
+\ \ \ \ \ \ state\.player\.y\ \+=\ \(state\.speedY\ \*\ slipFactor\)\ \*\ \(dt/1000\);\
+\ \ \ \ \ \ if\(state\.world\.wind\)\ state\.player\.y\ \+=\ \(state\.world\.wind\ \*\ dt/1000\);\
+\ \ \ \ \ \ state\.player\.y\ =\ Math\.max\(0,\ Math\.min\(canvas\.clientHeight\ \-\ state\.player\.h,\ state\.player\.y\)\);\
+\
+\ \ \ \ \ \ //\ Dust\ trail\ \(dymek\)\ behind\ player\
+\ \ \ \ \ \ const\ pace\ =\ 80\ \+\ Math\.abs\(state\.speedY\)\*0\.2;\
+\ \ \ \ \ \ if\(!state\._dustTimer\)\ state\._dustTimer\ =\ 0;\
+\ \ \ \ \ \ state\._dustTimer\ \-=\ dt;\
+\ \ \ \ \ \ if\(state\._dustTimer\ <=\ 0\)\{\
+\ \ \ \ \ \ \ \ state\._dustTimer\ =\ 1000/pace;\
+\ \ \ \ \ \ \ \ state\.particles\.push\(\{\ x:\ state\.player\.x\ \-\ 6,\ y:\ state\.player\.y\ \+\ state\.player\.h\ \-\ 4,\ r:\ 2\+Math\.random\(\)\*3,\ vx:\ \-rand\(60,120\),\ vy:\ \-rand\(10,40\),\ a:\ 0\.8,\ ttl:\ 450\ \}\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ for\(const\ p\ of\ state\.particles\)\{\ p\.x\ \+=\ \(p\.vx\|\|\-80\)\ \*\ dt/1000;\ p\.y\ \+=\ \(p\.vy\|\|0\)\ \*\ dt/1000;\ p\.a\ \-=\ 0\.9\*dt/1000;\ p\.ttl\ \-=\ dt;\ \}\
+\ \ \ \ \ \ state\.particles\ =\ state\.particles\.filter\(p=>p\.ttl>0\ \&\&\ p\.a>0\);\
+\
+\ \ \ \ \ \ //\ Dash\ trail\ fade\
+\ \ \ \ \ \ for\(const\ t\ of\ state\.dashTrail\)\{\ t\.a\ \-=\ 0\.012\*dt;\ t\.ttl\ \-=\ dt;\ \}\
+\ \ \ \ \ \ state\.dashTrail\ =\ state\.dashTrail\.filter\(t=>t\.ttl>0\ \&\&\ t\.a>0\);\
+\
+\ \ \ \ \ \ //\ Speed\ lines\ on\ high\ level\
+\ \ \ \ \ \ if\(state\.diff\.level>18\)\{\
+\ \ \ \ \ \ \ \ if\(!state\._lineTimer\)\ state\._lineTimer=0;\
+\ \ \ \ \ \ \ \ state\._lineTimer\ \-=\ dt;\
+\ \ \ \ \ \ \ \ if\(state\._lineTimer<=0\)\{\
+\ \ \ \ \ \ \ \ \ \ state\._lineTimer\ =\ 60;\
+\ \ \ \ \ \ \ \ \ \ state\.speedlines\.push\(\{\ x:\ rand\(canvas\.clientWidth\*0\.25,\ canvas\.clientWidth\*0\.9\),\ y:\ rand\(10,\ canvas\.clientHeight\-10\),\ l:\ rand\(20,60\),\ a:\ 0\.8,\ vx:\ \-rand\(300,600\)\ \}\);\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ for\(const\ s\ of\ state\.speedlines\)\{\ s\.x\ \+=\ s\.vx\ \*\ dt/1000;\ s\.a\ \-=\ 0\.8\*dt/1000;\ \}\
+\ \ \ \ \ \ state\.speedlines\ =\ state\.speedlines\.filter\(s=>\ s\.x\ >\ \-80\ \&\&\ s\.a>0\);\
+\
+\ \ \ \ \ \ //\ Fog\ decay\
+\ \ \ \ \ \ if\(state\.world\.fog>0\)\{\ state\.world\.fog\ =\ Math\.max\(0,\ state\.world\.fog\ \-\ dt/5000\);\ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ //\ =========\ Draw\ =========\
+\ \ \ \ function\ drawRunner\(t\)\{\
+\ \ \ \ \ \ const\ p\ =\ state\.player;\ const\ inv\ =\ state\.player\.inv>0;\
+\ \ \ \ \ \ const\ bob\ =\ Math\.sin\(t\*10\)\ \*\ 1\.5;\ const\ x=p\.x,\ y=p\.y\ \+\ bob;\
+\ \ \ \ \ \ if\(inv\)\{\ ctx\.globalAlpha=0\.25;\ ctx\.fillStyle='\#a5f3fc';\ ctx\.beginPath\(\);\ ctx\.ellipse\(x\+10,\ y\+p\.h/2,\ 24,\ 18,\ 0,\ 0,\ Math\.PI\*2\);\ ctx\.fill\(\);\ ctx\.globalAlpha=1;\ \}\
+\ \ \ \ \ \ ctx\.lineWidth=2;\ ctx\.strokeStyle\ =\ inv\ \?\ '\#a5f3fc'\ :\ '\#38bdf8';\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.arc\(x\+12,\ y\+8,\ 6,\ 0,\ Math\.PI\*2\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(x\+12,\ y\+14\);\ ctx\.lineTo\(x\+12,\ y\+30\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ const\ swing\ =\ Math\.sin\(t\*12\);\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(x\+12,\ y\+18\);\ ctx\.lineTo\(x\+12\ \+\ 8\*swing,\ y\+24\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(x\+12,\ y\+18\);\ ctx\.lineTo\(x\+12\ \-\ 8\*swing,\ y\+24\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ const\ stride\ =\ Math\.cos\(t\*12\);\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(x\+12,\ y\+30\);\ ctx\.lineTo\(x\+12\ \+\ 10\*stride,\ y\+44\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(x\+12,\ y\+30\);\ ctx\.lineTo\(x\+12\ \-\ 10\*stride,\ y\+44\);\ ctx\.stroke\(\);\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ drawBackground\(\)\{\
+\ \ \ \ \ \ const\ w\ =\ canvas\.clientWidth,\ h\ =\ canvas\.clientHeight;\
+\ \ \ \ \ \ //\ pasy\
+\ \ \ \ \ \ ctx\.globalAlpha=\.06;\ ctx\.fillStyle='\#ffffff';\ for\(let\ i=1;i<state\.lanes;i\+\+\)\{\ ctx\.fillRect\(0,\ i\*\(h/state\.lanes\)\-1,\ w,\ 2\);\ \}\ ctx\.globalAlpha=1;\
+\ \ \ \ \ \ //\ mgła\
+\ \ \ \ \ \ if\(state\.world\.fog>0\)\{\ ctx\.globalAlpha\ =\ Math\.min\(0\.75,\ state\.world\.fog\);\ ctx\.fillStyle\ =\ '\#0b1222';\ ctx\.fillRect\(0,0,w,h\);\ ctx\.globalAlpha\ =\ 1;\ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ drawObstacles\(\)\{\
+\ \ \ \ \ \ for\(const\ o\ of\ state\.obstacles\)\{\
+\ \ \ \ \ \ \ \ //\ collision\ with\ player\
+\ \ \ \ \ \ \ \ const\ pb\ =\ \{\ x:\ state\.player\.x,\ y:\ state\.player\.y,\ w:\ state\.player\.w,\ h:\ state\.player\.h\ \};\
+\ \ \ \ \ \ \ \ const\ ob\ =\ \{\ x:o\.x,\ y:o\.y,\ w:o\.w,\ h:o\.h\ \};\
+\ \ \ \ \ \ \ \ if\(aabb\(pb,\ ob\)\)\{\
+\ \ \ \ \ \ \ \ \ \ if\(!state\.roundHadHit\)\{\
+\ \ \ \ \ \ \ \ \ \ \ \ state\.roundHadHit\ =\ true;\
+\ \ \ \ \ \ \ \ \ \ \ \ setBanner\('Dajemy\ ci\ jeszcze\ szansę\ na\ bonus!\ Złap\ serduszko\ i\ odzyskaj\ bonus!','warning'\);\
+\ \ \ \ \ \ \ \ \ \ \ \ if\(!state\.heartShownThisRound\)\{\ setTimeout\(spawnHeart,\ 1500\);\ state\.heartShownThisRound\ =\ true;\ \}\
+\ \ \ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \
+\ \ \ \ \ \ \ \ if\(o\.type==='crate'\)\{\ ctx\.fillStyle\ =\ '\#8b5cf6';\ ctx\.fillRect\(o\.x,o\.y,o\.w,o\.h\);\ \}\
+\ \ \ \ \ \ \ \ else\ if\(o\.type==='cone'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#f59e0b';\ ctx\.beginPath\(\);\ ctx\.moveTo\(o\.x\ \+\ o\.w/2,\ o\.y\);\ ctx\.lineTo\(o\.x\ \+\ o\.w,\ o\.y\ \+\ o\.h\);\ ctx\.lineTo\(o\.x,\ o\.y\ \+\ o\.h\);\ ctx\.closePath\(\);\ ctx\.fill\(\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(o\.type==='barrel'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#9ca3af';\ ctx\.beginPath\(\);\ ctx\.arc\(o\.x\+o\.r,\ o\.y\+o\.r,\ o\.r,\ 0,\ Math\.PI\*2\);\ ctx\.fill\(\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.strokeStyle='rgba\(255,255,255,\.6\)';\ ctx\.beginPath\(\);\ ctx\.arc\(o\.x\+o\.r,\ o\.y\+o\.r,\ o\.r\*0\.6,\ 0,\ Math\.PI\*2\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(o\.type==='saw'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.save\(\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.translate\(o\.x\+o\.r,\ o\.y\+o\.r\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.rotate\(o\.spin\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#e11d48';\
+\ \ \ \ \ \ \ \ \ \ for\(let\ i=0;i<10;i\+\+\)\{\ ctx\.beginPath\(\);\ ctx\.moveTo\(0,0\);\ ctx\.lineTo\(o\.r,\ \-3\);\ ctx\.lineTo\(o\.r,\ 3\);\ ctx\.closePath\(\);\ ctx\.rotate\(Math\.PI\*2/10\);\ ctx\.fill\(\);\ \}\
+\ \ \ \ \ \ \ \ \ \ ctx\.restore\(\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(o\.type==='pendulum'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.strokeStyle='rgba\(255,255,255,\.5\)';\ ctx\.lineWidth=1;\
+\ \ \ \ \ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(o\.ancX,\ o\.ancY\);\ ctx\.lineTo\(o\.x,\ o\.y\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle='\#22c55e';\ ctx\.beginPath\(\);\ ctx\.arc\(o\.x,\ o\.y,\ 9,\ 0,\ Math\.PI\*2\);\ ctx\.fill\(\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(o\.type==='zigzag'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#ef4444';\ ctx\.fillRect\(o\.x,o\.y,o\.w,o\.h\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ 'rgba\(255,255,255,\.6\)';\ ctx\.fillRect\(o\.x\+4,\ o\.y\+6,\ o\.w\-8,\ 3\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(o\.type==='hopper'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#14b8a6';\ ctx\.fillRect\(o\.x,o\.y,o\.w,o\.h\);\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \ \ //\ halo/outline\ dla\ czytelności\
+\ \ \ \ \ \ \ \ const\ bbx=o\.x\-1,\ bby=o\.y\-1,\ bbw=o\.w\+2,\ bbh=o\.h\+2;\
+\ \ \ \ \ \ \ \ ctx\.lineWidth\ =\ 2;\ ctx\.strokeStyle\ =\ 'rgba\(255,255,255,0\.85\)';\ ctx\.strokeRect\(bbx,bby,bbw,bbh\);\
+\ \ \ \ \ \ \ \ ctx\.lineWidth\ =\ 1;\ ctx\.strokeStyle\ =\ 'rgba\(0,0,0,0\.35\)';\ ctx\.strokeRect\(o\.x,\ o\.y,\ o\.w,\ o\.h\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ drawHazards\(\)\{\
+\ \ \ \ \ \ for\(const\ h\ of\ state\.hazards\)\{\
+\ \ \ \ \ \ \ \ if\(h\.kind==='oil'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ 'rgba\(59,130,246,0\.35\)';\ ctx\.fillRect\(h\.x,\ h\.y,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(h\.kind==='wall'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#ef4444';\ ctx\.fillRect\(h\.x,\ h\.y,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.strokeStyle\ =\ 'rgba\(255,255,255,\.8\)';\ ctx\.lineWidth=2;\ ctx\.strokeRect\(h\.x\-1,\ h\.y\-1,\ h\.w\+2,\ h\.h\+2\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(h\.kind==='laser'\)\{\
+\ \ \ \ \ \ \ \ \ \ const\ active\ =\ Math\.sin\(\(performance\.now\(\)%100000\)/h\.period\ \+\ h\.phase\)\ >\ 0\.35;\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ active\ \?\ 'rgba\(255,0,102,0\.9\)'\ :\ 'rgba\(255,0,102,0\.25\)';\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillRect\(h\.x,\ h\.y,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \ \ \}\ else\ if\(h\.kind==='fall'\)\{\
+\ \ \ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#eab308';\ ctx\.fillRect\(h\.x,\ h\.y,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \ \ \ \ ctx\.strokeStyle\ =\ 'rgba\(255,255,255,\.6\)';\ ctx\.strokeRect\(h\.x,\ h\.y,\ h\.w,\ h\.h\);\
+\ \ \ \ \ \ \ \ \}\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ drawFX\(\)\{\
+\ \ \ \ \ \ //\ dash\ trail\
+\ \ \ \ \ \ for\(const\ t\ of\ state\.dashTrail\)\{\
+\ \ \ \ \ \ \ \ ctx\.globalAlpha\ =\ t\.a;\
+\ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ 'rgba\(56,189,248,0\.35\)';\
+\ \ \ \ \ \ \ \ ctx\.fillRect\(t\.x\-3,\ t\.y\-3,\ t\.w\+6,\ t\.h\+6\);\
+\ \ \ \ \ \ \ \ ctx\.globalAlpha\ =\ 1;\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ //\ dust\
+\ \ \ \ \ \ for\(const\ p\ of\ state\.particles\)\{\
+\ \ \ \ \ \ \ \ ctx\.globalAlpha\ =\ Math\.max\(0,\ p\.a\);\
+\ \ \ \ \ \ \ \ ctx\.fillStyle\ =\ '\#94a3b8';\
+\ \ \ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.arc\(p\.x,\ p\.y,\ p\.r,\ 0,\ Math\.PI\*2\);\ ctx\.fill\(\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ //\ speedlines\
+\ \ \ \ \ \ for\(const\ s\ of\ state\.speedlines\)\{\
+\ \ \ \ \ \ \ \ ctx\.globalAlpha\ =\ Math\.max\(0,\ s\.a\);\
+\ \ \ \ \ \ \ \ ctx\.strokeStyle\ =\ 'rgba\(255,255,255,0\.8\)';\
+\ \ \ \ \ \ \ \ ctx\.lineWidth\ =\ 2;\
+\ \ \ \ \ \ \ \ ctx\.beginPath\(\);\ ctx\.moveTo\(s\.x,\ s\.y\);\ ctx\.lineTo\(s\.x\+\ s\.l,\ s\.y\);\ ctx\.stroke\(\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \ \ ctx\.globalAlpha\ =\ 1;\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ draw\(\)\{\
+\ \ \ \ \ \ const\ w\ =\ canvas\.clientWidth,\ h\ =\ canvas\.clientHeight;\
+\ \ \ \ \ \ ctx\.clearRect\(0,0,w,h\);\
+\ \ \ \ \ \ //\ background\ \+\ lanes\ \+\ fog\
+\ \ \ \ \ \ drawBackground\(\);\
+\ \ \ \ \ \ //\ world\
+\ \ \ \ \ \ drawObstacles\(\);\
+\ \ \ \ \ \ \
+\ \ \ \ \ \ drawHeart\(\);\
+drawHazards\(\);\
+\ \ \ \ \ \ drawRunner\(state\.world\.t\);\
+\ \ \ \ \ \ drawFX\(\);\
+\
+\ \ \ \ \ \ //\ debug\ hb\
+\ \ \ \ \ \ if\(state\.debug\.hitboxes\)\{\
+\ \ \ \ \ \ \ \ const\ pf\ =\ shrinkRect\(\{x:state\.player\.x,y:state\.player\.y,w:state\.player\.w,h:state\.player\.h\},\ 0\.9\);\
+\ \ \ \ \ \ \ \ ctx\.strokeStyle\ =\ '\#60a5fa';\ ctx\.lineWidth\ =\ 1\.5;\ ctx\.strokeRect\(pf\.x,\ pf\.y,\ pf\.w,\ pf\.h\);\
+\ \ \ \ \ \ \}\
+\ \ \ \ \}\
+\
+\ \ \ \ function\ loop\(ts\)\{\
+\ \ \ \ \ \ if\(!state\.lastTime\)\ state\.lastTime\ =\ ts;\
+\ \ \ \ \ \ const\ dt\ =\ Math\.min\(50,\ ts\ \-\ state\.lastTime\);\
+\ \ \ \ \ \ state\.lastTime\ =\ ts;\
+\ \ \ \ \ \ update\(dt\);\ updateHeart\(dt\);\ draw\(\);\
+\ \ \ \ \ \ requestAnimationFrame\(loop\);\
+\ \ \ \ \}\
+\
+\ \ \ \ \
+document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
+\ \ try\{\
+\ \ \ \ const\ savedNick\ =\ localStorage\.getItem\('gp_nick'\);\
+\ \ \ \ const\ savedPoints\ =\ parseInt\(localStorage\.getItem\('gp_points'\)\|\|'0',10\);\
+\ \ \ \ if\(savedNick\)\{\ setNick\(savedNick\);\ \}\
+\ \ \ \ if\(!isNaN\(savedPoints\)\ \&\&\ savedPoints>=1\)\{\ setPoints\(savedPoints\);\ \}\
+\ \ \}catch\(e\)\{\}\
+\}\);\
+\
+\ \ \ \ //\ Init\
+\ \ \ \ resize\(\);\
+\ \ \ \ state\.player\.y\ =\ \(canvas\.clientHeight\ \-\ state\.player\.h\)/2;\
+\ \ \ \ state\.nextObstacleIn\ =\ 400;\
+\ \ \ \ countdownLabel\.textContent\ =\ mmss\(state\.countdown\);\
+\ \ \ \ pointsCount\.textContent\ =\ String\(state\.points\);\
+\ \ \ \ setTimeout\(\(\)=>\{\ try\{\ canvas\.focus\(\);\ \}catch\(e\)\{\}\ \},\ 0\);\
+\ \ \ \ window\.addEventListener\('pointerdown',\ \(\)=>\{\ try\{\ canvas\.focus\(\);\ \}catch\(e\)\{\}\ \},\ \{\ once:\ true\ \}\);\
+\ \ \ \ requestAnimationFrame\(loop\);\
+\ \ \2 -->
 
   <style>
     * { box-sizing: border-box; }
@@ -53,6 +683,65 @@
     .shake { animation: shake .2s linear 1; }
     @keyframes shake { 0%{ transform: translateX(0)} 25%{ transform: translateX(-3px)} 50%{ transform: translateX(3px)} 75%{ transform: translateX(-2px)} 100%{ transform: translateX(0)} }
   </style>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background: #000;
+}
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+#menu, #adModal, .modal, .panel {
+  box-sizing: border-box;
+  max-width: 95vw;
+}
+input, button {
+  font-size: min(6vw, 20px);
+  padding: 10px 15px;
+  border-radius: 6px;
+}
+button {
+  background: #ffcc00;
+  border: none;
+  font-weight: bold;
+}
+button:active {
+  transform: scale(0.97);
+}
+#menu h1, #menu label {
+  font-size: min(8vw, 28px);
+}
+#menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5vw;
+}
+.modal .panel {
+  padding: 5vw;
+  text-align: center;
+}
+.modal .panel h3 {
+  font-size: min(9vw, 32px);
+}
+.modal .panel p {
+  font-size: min(7vw, 24px);
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  #menu, .modal .panel {
+    padding: 2vh;
+  }
+}
+</style>
+
 </head>
 <body>
   <div id="app">
@@ -72,13 +761,10 @@
         <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
       </div>
       <div class="right">
-        <button id="watchNow" class="cta" style="display:none">Obejrzyj reklamę</button>
-        <button id="endGame" class="link">Zakończ grę</button>
-      </div>
+        <button id="watchNow" class="cta" style="display:none">Obejrzyj reklamę</button></div>
     </div>
 
     <div class="bar" id="bbar">
-      <div class="muted">ℹ️ Standard: 1 reklama = <b>1 pkt<\/b> • Czysta runda = <b>2 pkt</b> na GrynaPlus • <span class="small">Chcesz zachować postęp obejrzanych reklam i nick? Obejrzyj reklamę przed wyjściem.</span> • <span class="small"><b>Bonus:</b> uniknij wszystkie przeszkody w rundzie (2:00) = +1 pkt</span></div>
       <div class="muted" id="statusMsg"></div>
     </div>
 
@@ -88,7 +774,7 @@
         <h1>ReklamoBiegacz</h1>
         <div class="subtitle">Wpisz swój nick i kliknij <b>Start</b>, aby rozpocząć bieg.</div>
         <div class="row">
-          <input id="menuNick" maxlength="24" placeholder="np. GrynaPlusFan" />
+          <input id="menuNick" placeholder="Wpisz nick (min. 1 znak)" maxlength="24" placeholder="np. GrynaPlusFan" />
           <button id="menuSave" class="btn" disabled>Zapisz</button>
           <button id="menuStart" class="btn" disabled>Start</button>
         </div>
@@ -109,16 +795,7 @@
       </div>
     </div>
 
-    <!-- End Game modal -->
-    <div id="endModal" class="modal-backdrop">
-      <div class="modal">
-        <h2>Zakończyć grę?</h2>
-        <p>Jeśli chcesz <b>zachować postęp obejrzanych reklam i nick</b> na serwerze, obejrzyj krótką reklamę przed wyjściem.</p>
-        <div class="row">
-          <button id="endAdBtn" class="btn">Obejrzyj reklamę i zapisz</button>
-          <button id="quitBtn" class="btn" style="background:#1a233a">Wyjdź bez zapisu</button>
-        </div>
-        <p class="small" style="margin-top:10px">Uwaga: ta reklama nie nalicza punktu – służy wyłącznie do zapisu postępu.</p>
+    <!-- End Game modal --><p class="small" style="margin-top:10px">Uwaga: ta reklama nie nalicza punktu – służy wyłącznie do zapisu postępu.</p>
         <p id="endAdError" style="display:none;color:#fca5a5;margin-top:10px">Reklama niedostępna. Upewnij się, że wkleiłeś tag Monetag.</p>
       </div>
     </div>
@@ -129,7 +806,24 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    function resize() {
+    
+    // === Persistence helpers (DO NOT REMOVE) ===
+    function setNick(nick){
+      if(typeof nick !== 'string') return;
+      state.nick = nick.trim();
+      try{ localStorage.setItem('gp_nick', state.nick); }catch(e){}
+      try{ nickLabel.textContent = state.nick || '—'; }catch(e){}
+    }
+    function setPoints(p){
+      const val = Math.max(0, parseInt(p||0,10));
+      state.points = val;
+      try{ pointsCount.textContent = String(state.points); }catch(e){}
+      if(state.points >= 1){
+        try{ localStorage.setItem('gp_points', String(state.points)); }catch(e){}
+      }
+    }
+    // === End helpers ===
+function resize() {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.floor(canvas.clientWidth * dpr);
       canvas.height = Math.floor(canvas.clientHeight * dpr);
@@ -164,6 +858,9 @@
       dashTrail: [],
       world: { mode: 'clear', nextEventIn: 15000, t: 0, wind: 0, fog: 0 },
       obstaclesThisRound: 0,
+      heart: null,
+      heartShownThisRound: false,
+      roundHadHit: false,
       diff: { t:0, level:0 },
       debug: { hitboxes: false, nearMiss:false },
     };
@@ -204,14 +901,14 @@
     function safeSetStorage(key,val){ try{ localStorage.setItem(key,val); return true; } catch(e){ try{ sessionStorage.setItem(key,val); return true; } catch(_){ return false; } } }
     function safeGetStorage(key){ try{ return localStorage.getItem(key) ?? sessionStorage.getItem(key) ?? ''; } catch(e){ try{ return sessionStorage.getItem(key) ?? ''; } catch(_){ return ''; } } }
     function setNick(n){ state.nick = n.trim(); const ok = safeSetStorage('gp_nick', state.nick); nickLabel.textContent = state.nick || '—'; if(!ok){ showToast('Uwaga: pamięć przeglądarki zablokowana – nick zapisany tymczasowo'); } }
-    function validateNick(val){ return val.trim().length >= 3; }
+    function validateNick(val){ return val.trim().length >= 1; }
     function rand(a,b){ return a + Math.random()*(b-a); }
     function aabb(a,b){ return !(a.x+a.w < b.x || a.x > b.x+b.w || a.y+a.h < b.y || a.y > b.y+b.h); }
     function shrinkRect(r, f){ const dw = r.w*(1-f)/2, dh = r.h*(1-f)/2; return { x:r.x+dw, y:r.y+dh, w:r.w*(f), h:r.h*(f) }; }
 
     // Load saved nick (if any)
     const savedNick = safeGetStorage('gp_nick');
-    if(savedNick){ state.nick = savedNick; menuNick.value = savedNick; menuSave.disabled = false; menuStart.disabled = false; nickLabel.textContent = savedNick; }
+    if(savedNick){ setNick(savedNick); menuNick.value = savedNick; menuSave.disabled = false; menuStart.disabled = false; nickLabel.textContent = savedNick; }
 
     // ========= Start menu =========
     menuNick.addEventListener('input', ()=>{ const ok = validateNick(menuNick.value); menuSave.disabled = !ok; menuStart.disabled = !ok; if(ok){ setNick(menuNick.value); } });
@@ -223,7 +920,7 @@
       startMenu.style.display = 'none';
       hud.style.display = 'flex';
       bbar.style.display = 'flex';
-      state.paused = false; state.started = true;
+      state.paused = false; state.started = true; state.heart=null; state.heartShownThisRound=false; state.roundHadHit=false;
       setTimeout(()=>{ try{ canvas.focus(); }catch(e){} }, 0);
       setTimeout(()=>{ setBanner('Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!','success'); }, 500);
     });
@@ -391,36 +1088,74 @@
       state.countdown = 120000; state._warned = false; countdownLabel.textContent = mmss(state.countdown);
       statusMsg.textContent = ''; state.roundHadHit = false; state.obstaclesThisRound = 0; obstaclesCount.textContent = '0';
       setBanner('Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!','success'); state.paused = false; laterBtn.style.display = '';
-    }
+    
+      state.heart=null; state.heartShownThisRound=false; state.roundHadHit=false;
+}
 
     // ====== Bind buttons to Monetag ======
     adBtn.addEventListener('click', async ()=>{
       adBtn.disabled = true; adError.style.display='none';
-      try {
-        if(typeof window.show_9687992 !== 'function'){ throw new Error('Brak show_9687992'); }
-        await window.show_9687992().then(()=>{});
-        let gained = state.roundHadHit ? 1 : 2;
-        state.points += gained; pointsCount.textContent = String(state.points);
-        showToast(`+${gained} pkt przyznane`);
-        resetCountdown();
-        adModal.style.display = 'none';
-      } catch(err){ adError.style.display='block'; }
-      finally { adBtn.disabled = false; }
+      if (typeof show_9687992 === 'function') {
+        show_9687992().then(()=>{
+          let gained = state.roundHadHit ? 1 : 2;
+          if (typeof setPoints==='function'){ setPoints(state.points + gained); } 
+          else { state.points += gained; pointsCount.textContent = String(state.points); }
+          showToast(`Gratulacje, zdobywasz +${gained} pkt`, 'success');
+          resetCountdown();
+          adModal.style.display = 'none';
+        }).catch(err=>{
+          console.error('Ad error', err);
+          adError.style.display='block';
+        }).finally(()=>{
+          adBtn.disabled = false;
+        });
+      } else {
+        adError.style.display='block';
+        adBtn.disabled = false;
+      }
     });
-    endGame.addEventListener('click', ()=>{ endModal.style.display='flex'; endAdError.style.display='none'; });
-    endAdBtn.addEventListener('click', async ()=>{
-      endAdBtn.disabled = true; endAdError.style.display='none';
-      try {
-        if(typeof window.show_9687992 !== 'function'){ throw new Error('Brak show_9687992'); }
-        await window.show_9687992().then(()=>{});
-        showToast('Postęp zapisany'); window.location.hash = '#exit';
-      } catch(err){ endAdError.style.display='block'; }
-      finally { endAdBtn.disabled = false; }
-    });
-    quitBtn.addEventListener('click', ()=>{ window.location.hash = '#exit'; });
 
     // ========= Update =========
+    
+    // Heart sprite image
+    const heartImg = new Image();
+    heartImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAcCAYAAAAAwr0iAAAA2UlEQVR4nMVW0RXDIAgEXzdpxmin6hydqhmjnSX5ynvUCAFEvC81Htw7iIrA4AuPrV5bYEVuv5dftGRpvYd/UkQ33bfP+xj/8Pk6xpITGpGU/+cAl7yeRzpUWovWID38Zg9kghVAa96aR+EmfRyVlAIB7PWLRAGwHTCRWGDFQifZyQEm/QXsQZThQp3j5EB2KZolGCVCfRtmJRcFRLogxRIdiBBxFeOyBD0iNFxVD3hEaDlDmtAiWC1AG9TqlsmBEeeDuQSSCI/AsB7wuuMSUCeb9Z6Y+pIKww5belCAoKsZpAAAAABJRU5ErkJggg==';
+
+    function spawnHeart(){
+      const lane = Math.floor(Math.random()*state.lanes);
+      const laneH = canvas.clientHeight / state.lanes;
+      const size = 30;
+      const y = lane*laneH + (laneH-size)/2;
+      state.heart = { x: canvas.clientWidth + 20, y: y, w: size, h: size, vy:0 };
+    }
+
+    function drawHeart(){
+      if(!state.heart) return;
+      const h = state.heart;
+      const bob = Math.sin(state.world.t*6) * 3;
+      try{ ctx.drawImage(heartImg, h.x, h.y + bob, h.w, h.h); }catch(e){
+        ctx.fillStyle = '#e11d48'; ctx.fillRect(h.x, h.y + bob, h.w, h.h);
+      }
+    }
+
+    function updateHeart(dt){
+      if(!state.heart) return;
+      const h = state.heart;
+      h.x -= state.speed * dt/1000;
+      const hb = { x:h.x+2, y:h.y+2, w:h.w-4, h:h.h-4 }; // slightly easier hitbox
+      const pb = { x: state.player.x, y: state.player.y, w: state.player.w, h: state.player.h };
+      if( aabb( hb, pb ) ){
+        state.roundHadHit = false; // restore clean run bonus
+        setBanner('Bonus odzyskany!','success');
+        state.heart = null;
+        state.heartShownThisRound = true;
+      } else if(h.x + h.w < -10){
+        state.heart = null;
+      }
+    }
+
     function update(dt){
+
       if(state.paused) return;
       state.laneH = canvas.clientHeight / state.lanes;
       state.world.t += dt/1000; state.diff.t += dt;
@@ -445,6 +1180,17 @@
 
       // Move obstacles
       for(const o of state.obstacles){
+        // collision with player
+        const pb = { x: state.player.x, y: state.player.y, w: state.player.w, h: state.player.h };
+        const ob = { x:o.x, y:o.y, w:o.w, h:o.h };
+        if(aabb(pb, ob)){
+          if(!state.roundHadHit){
+            state.roundHadHit = true;
+            setBanner('Dajemy ci jeszcze szansę na bonus! Złap serduszko i odzyskaj bonus!','warning');
+            if(!state.heartShownThisRound){ setTimeout(spawnHeart, 1500); state.heartShownThisRound = true; }
+          }
+        }
+    
         o.x -= (o.speed * dt/1000);
         if(o.type==='saw'){ o.spin += 6*dt/1000; }
         if(o.type==='zigzag'){ o.y += o.vy * dt/1000; if(o.y<0 || o.y+o.h>canvas.clientHeight){ o.vy *= -1; } }
@@ -471,7 +1217,18 @@
       // Collisions
       let collided = false;
       if(state.player.inv<=0){
-        for(const o of state.obstacles){ if(collidesPlayerObstacle(state.player, o)){ onHit(); collided=true; break; } }
+        for(const o of state.obstacles){
+        // collision with player
+        const pb = { x: state.player.x, y: state.player.y, w: state.player.w, h: state.player.h };
+        const ob = { x:o.x, y:o.y, w:o.w, h:o.h };
+        if(aabb(pb, ob)){
+          if(!state.roundHadHit){
+            state.roundHadHit = true;
+            setBanner('Dajemy ci jeszcze szansę na bonus! Złap serduszko i odzyskaj bonus!','warning');
+            if(!state.heartShownThisRound){ setTimeout(spawnHeart, 1500); state.heartShownThisRound = true; }
+          }
+        }
+     if(collidesPlayerObstacle(state.player, o)){ onHit(); collided=true; break; } }
         if(!collided){ for(const h of state.hazards){ if(collidesPlayerHazard(state.player, h)){ onHit(); collided=true; break; } } }
       }
 
@@ -539,6 +1296,17 @@
 
     function drawObstacles(){
       for(const o of state.obstacles){
+        // collision with player
+        const pb = { x: state.player.x, y: state.player.y, w: state.player.w, h: state.player.h };
+        const ob = { x:o.x, y:o.y, w:o.w, h:o.h };
+        if(aabb(pb, ob)){
+          if(!state.roundHadHit){
+            state.roundHadHit = true;
+            setBanner('Dajemy ci jeszcze szansę na bonus! Złap serduszko i odzyskaj bonus!','warning');
+            if(!state.heartShownThisRound){ setTimeout(spawnHeart, 1500); state.heartShownThisRound = true; }
+          }
+        }
+    
         if(o.type==='crate'){ ctx.fillStyle = '#8b5cf6'; ctx.fillRect(o.x,o.y,o.w,o.h); }
         else if(o.type==='cone'){
           ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.moveTo(o.x + o.w/2, o.y); ctx.lineTo(o.x + o.w, o.y + o.h); ctx.lineTo(o.x, o.y + o.h); ctx.closePath(); ctx.fill();
@@ -618,7 +1386,9 @@
       drawBackground();
       // world
       drawObstacles();
-      drawHazards();
+      
+      drawHeart();
+drawHazards();
       drawRunner(state.world.t);
       drawFX();
 
@@ -633,9 +1403,19 @@
       if(!state.lastTime) state.lastTime = ts;
       const dt = Math.min(50, ts - state.lastTime);
       state.lastTime = ts;
-      update(dt); draw();
+      update(dt); updateHeart(dt); draw();
       requestAnimationFrame(loop);
     }
+
+    
+document.addEventListener('DOMContentLoaded', ()=>{
+  try{
+    const savedNick = localStorage.getItem('gp_nick');
+    const savedPoints = parseInt(localStorage.getItem('gp_points')||'0',10);
+    if(savedNick){ setNick(savedNick); }
+    if(!isNaN(savedPoints) && savedPoints>=1){ setPoints(savedPoints); }
+  }catch(e){}
+});
 
     // Init
     resize();
@@ -647,5 +1427,110 @@
     window.addEventListener('pointerdown', ()=>{ try{ canvas.focus(); }catch(e){} }, { once: true });
     requestAnimationFrame(loop);
   </script>
+  <script src="https://libtl.com/sdk.js" data-zone="9687992" data-sdk="show_9687992"></script>
+
+<!-- === OVERRIDES: end-of-level flow (auto points + auto ad + next level button) === -->
+<script>
+(function(){
+  function setupOverrides(){
+    try{
+      // Replace old ad button handler with "start next level"
+      var btn = window.adBtn || document.getElementById('adBtn');
+      if (btn) {
+        var parent = btn.parentNode;
+        var newBtn = btn.cloneNode(true); // removes old listeners
+        newBtn.id = 'adBtn';
+        newBtn.textContent = 'Rozpocznij następny poziom';
+        // basic styling fallback if any CSS depended on classes
+        newBtn.style.display = 'none'; // we'll show it when modal is opened
+        parent.replaceChild(newBtn, btn);
+        window.adBtn = newBtn;
+        newBtn.addEventListener('click', function(){
+          try{ document.getElementById('adModal').style.display = 'none'; }catch(e){}
+          try{ window.resetCountdown(); }catch(e){ console.error(e); }
+        });
+      }
+      // Hide "later" and error by default
+      var later = window.laterBtn || document.getElementById('laterBtn');
+      if (later) later.style.display = 'none';
+      var adError = window.adError || document.getElementById('adError');
+      if (adError) adError.style.display = 'none';
+
+      // Override level-complete handler
+      window.onCheckpointReady = function(){
+        try {
+          var statusMsg = document.getElementById('statusMsg');
+          if (statusMsg) statusMsg.textContent = '';
+        } catch(e){}
+        if (window.state) window.state.paused = true;
+
+        var gained = (window.state && window.state.roundHadHit) ? 1 : 2;
+        try{
+          if (typeof window.setPoints === 'function') {
+            window.setPoints((window.state?.points || 0) + gained);
+          } else if (window.state) {
+            window.state.points = (window.state.points || 0) + gained;
+            var pc = document.getElementById('pointsCount');
+            if (pc) pc.textContent = String(window.state.points);
+          }
+        }catch(e){ console.error('points set err', e); }
+
+        // Update modal text
+        try{
+          var titleEl = document.getElementById('adTitle');
+          var textEl  = document.getElementById('adText');
+          if (titleEl) titleEl.textContent = 'Poziom ukończony';
+          if (textEl)  textEl.innerHTML   = 'Zdobyłeś <b>'+gained+' pkt</b>';
+        }catch(e){}
+
+        // Play ad automatically, but don't block longer than 8s
+        var adP;
+        try{
+          if (typeof window.show_9687992 === 'function') {
+            adP = window.show_9687992();
+          } else {
+            adP = Promise.reject('no monetag function');
+          }
+        } catch(e){ adP = Promise.reject(e); }
+        var timeout = new Promise(function(resolve){ setTimeout(resolve, 8000); });
+
+        Promise.race([adP, timeout]).finally(function(){
+          try{
+            var adModal = document.getElementById('adModal');
+            var adBtn = window.adBtn || document.getElementById('adBtn');
+            var err = document.getElementById('adError');
+            if (err) err.style.display = 'none';
+            if (adBtn) adBtn.style.display = 'inline-block';
+            if (adModal) adModal.style.display = 'flex';
+          }catch(e){}
+        });
+      };
+    }catch(e){ console.error(e); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupOverrides);
+  } else {
+    setupOverrides();
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  function resizeCanvas(){
+    var c = document.querySelector('canvas');
+    if(c){
+      c.width = window.innerWidth;
+      c.height = window.innerHeight;
+    }
+  }
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('orientationchange', resizeCanvas);
+  document.addEventListener('DOMContentLoaded', resizeCanvas);
+})();
+</script>
+
 </body>
 </html>
