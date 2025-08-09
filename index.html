@@ -700,6 +700,62 @@ document\.addEventListener\('DOMContentLoaded',\ \(\)=>\{\
 /* Desktop tweaks keep bars where the file already placed them; we only ensure button order in DOM remains save then start */
 #startMenu .gameTitle { margin-bottom: .5rem; font-size: 1.4rem; font-weight: 800; }
 
+
+/* === Mobile layout: ensure 3 items top + 3 bottom are visible === */
+@media (max-width: 480px) {
+  /* Bars pinned and compact */
+  #hud, #bbar {
+    position: fixed;
+    left: 0; right: 0;
+    z-index: 30;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 8px;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
+    pointer-events: none; /* keep clicks going to canvas */
+  }
+  #hud { top: 0; min-height: 48px; }
+  #bbar { bottom: 0; min-height: 42px; background: linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+
+  /* Compact chips */
+  #hud .hud-item, #bbar .hud-item {
+    pointer-events: auto;
+    flex: 1 1 calc(33.33% - 8px);
+    min-width: 0;
+    text-align: center;
+    padding: 6px 6px;
+    margin: 0;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.15;
+  }
+  #hud .hud-item b, #bbar .hud-item b { font-size: 12px; }
+
+  /* Avoid breaking the nick badly—allow it to shrink */
+  #nickLabel { display: inline-block; max-width: 90px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+  /* Ensure game area not covered by bars */
+  #app, body, html { height: 100%; }
+  #gameCanvas {
+    position: absolute;
+    top: 56px;   /* space for top bar */
+    bottom: 50px;/* space for bottom bar */
+    left: 0; right: 0;
+  }
+
+  /* Start menu vertical order and spacing */
+  #startMenu .buttons { display: flex; flex-direction: column; gap: 8px; }
+  #menuSave { order: 1; }
+  #menuStart { order: 2; }
+}
+
+
+/* enforce vertical buttons in start menu (save on top, then start) */
+#startMenu .menu .row:first-of-type { display: flex; flex-direction: column; gap: 10px; }
+#startMenu #menuSave { order: 1; }
+#startMenu #menuStart { order: 2; }
+
 </style>
 
 <style>
@@ -769,13 +825,10 @@ button:active {
     <div id="banner" class="banner success">Omijaj przeszkody – bonus <b>+1 pkt</b> w zasięgu!</div>
 
     <div class="hud" id="hud">
-  <div class="hud-left"><span id="gameTitleHUD" class="title">Bieg po Punkty</span> • <span>Nick: <b id="nickLabel">—</b></span> • <span>Punkty na GrynaPlus: <b id="pointsCount">0</b></span></div>
       <div class="left">
         <div class="badge brand">Bieg po Punkty</div>
         <div class="badge">Nick: <span id="nickLabel" class="nick">—</span></div>
         <div class="badge">Punkty na GrynaPlus: <span id="pointsCount">0</span></div>
-        <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
-        <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
       </div>
       <div class="center">
         <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
@@ -784,8 +837,13 @@ button:active {
         <button id="watchNow" class="cta" style="display:none">Obejrzyj reklamę</button></div>
     </div>
 
-    <div class="bar" id="bbar">
-  <div class="bbar-row"><span>Przeszkody (runda): <b id="obstaclesCount">0</b></span> • <span>Poziom trudności: <b id="diffLabel">0</b></span> • <span>Reklama za: <b id="countdown">02:00</b></span></div>
+    <div class="hud" id="bbar">
+  <div class="right">
+    <div class="badge">Przeszkody (runda): <span id="obstaclesCount">0</span></div>
+    <div class="badge">Poziom trudności: <span id="diffLabel">0</span></div>
+    <div class="badge">Reklama za: <span id="countdown">02:00</span></div>
+  </div>
+</div>
 </div>
     </div>
 
